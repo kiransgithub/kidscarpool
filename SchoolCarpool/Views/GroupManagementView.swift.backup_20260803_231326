@@ -1,0 +1,666 @@
+import SwiftUI
+
+struct GroupManagementView: View {
+    @Environment(CarpoolStore.self) private var store
+
+    var body: some View {
+        List {
+            if let group = store.activeGroup {
+                Section {
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack(alignment: .top) {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .fill(KCPTheme.heroGradient)
+                                Image(systemName: "person.3.sequence.fill")
+                                    .font(.title2.bold())
+                                    .foregroundStyle(.white)
+                            }
+                            .frame(width: 54, height: 54)
+
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(group.name).font(.headline)
+                                Text(group.schoolName).font(.subheadline).foregroundStyle(.secondary)
+                                Text("\(group.academicYear) • \(group.code)")
+                                    .font(.caption.monospaced()).foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                        }
+
+                        HStack {
+                            Label(store.currentRole.displayName, systemImage: store.currentRole.symbol)
+                                .font(.caption.bold())
+                                .foregroundStyle(roleColor(store.currentRole))
+                            Spacer()
+                            Label("Schedule v\(group.currentScheduleVersion)", systemImage: "clock.arrow.circlepath")
+                                .font(.caption.bold())
+                                .foregroundStyle(KCPTheme.violet)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+
+                Section("Group setup") {
+                    if store.isCurrentUserAdmin {
+                        NavigationLink { InviteParentView() } label: {
+                            Label("Invite another parent", systemImage: "person.badge.plus")
+                        }
+                    }
+                    NavigationLink { AcceptInvitationView() } label: {
+                        Label("Accept an invitation", systemImage: "envelope.open.fill")
+                    }
+                    NavigationLink { GroupMembersView() } label: {
+                        HStack {
+                            Label("Members & admins", systemImage: "person.3.fill")
+                            Spacer()
+                            Text("\(store.groupMembers.filter { $0.status == .active }.count)")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    NavigationLink { GroupInvitationsView() } label: {
+                        HStack {
+                            Label("Invitation history", systemImage: "envelope.fill")
+                            Spacer()
+                            Text("\(store.groupInvitations.filter { $0.status == .pending }.count) pending")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+
+                Section("Availability & schedule") {
+                    NavigationLink { MyAvailabilityView() } label: {
+                        Label("My drop & pickup availability", systemImage: "slider.horizontal.3")
+                    }
+                    NavigationLink { AllConstraintsView() } label: {
+                        Label("All parent constraints", systemImage: "person.3.sequence.fill")
+                    }
+                    if store.isCurrentUserAdmin {
+                        NavigationLink { ConstraintRequestQueueView() } label: {
+                            HStack {
+                                Label("Constraint approval queue", systemImage: "checklist.checked")
+                                Spacer()
+                                if store.pendingConstraintCount > 0 {
+                                    Text("\(store.pendingConstraintCount)")
+                                        .font(.caption.bold())
+                                        .foregroundStyle(.white)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .background(KCPTheme.red, in: Capsule())
+                                }
+                            }
+                        }
+                    }
+                    NavigationLink { ScheduleVersionsView() } label: {
+                        Label("Schedule versions", systemImage: "square.stack.3d.up.fill")
+                    }
+                    if store.isCurrentUserAdmin {
+                        Button {
+                            store.regenerateScheduleFromConstraints()
+                        } label: {
+                            Label("Generate & publish schedule", systemImage: "calendar.badge.checkmark")
+                        }
+                        .disabled(!scheduleReady)
+
+                        if !scheduleReady {
+                            Text(scheduleReadinessMessage)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+
+                Section("Accountability") {
+                    NavigationLink { AuditTrailView() } label: {
+                        Label("Immutable audit trail", systemImage: "doc.text.magnifyingglass")
+                    }
+                    Button {
+                        Task { await store.refreshGroupWorkspace() }
+                    } label: {
+                        Label(store.isSyncing ? "Refreshing…" : "Refresh from central database", systemImage: "arrow.clockwise")
+                    }
+                    .disabled(store.isSyncing)
+                }
+
+                if store.isCurrentUserAdmin {
+                    Section("Group lifecycle") {
+                        NavigationLink { CreateGroupView() } label: {
+                            Label("Create another carpool group", systemImage: "plus.rectangle.on.folder")
+                        }
+                        Text("Creating another group switches this phone to the new group. The previous group's records remain in PostgreSQL.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            } else {
+                Section {
+                    ContentUnavailableView(
+                        "No carpool group",
+                        systemImage: "person.3.sequence",
+                        description: Text("Create a private group or accept an invitation from another parent.")
+                    )
+                    NavigationLink { CreateGroupView() } label: {
+                        Label("Create a carpool group", systemImage: "plus.circle.fill")
+                    }
+                    NavigationLink { AcceptInvitationView() } label: {
+                        Label("Accept an invitation", systemImage: "envelope.open.fill")
+                    }
+                }
+            }
+        }
+        .navigationTitle("Carpool Group")
+        .refreshable { await store.refreshGroupWorkspace(showSuccess: false) }
+        .toolbar {
+            if store.isCurrentUserAdmin {
+                ToolbarItem(placement: .topBarTrailing) {
+                    NavigationLink(destination: CreateGroupView()) {
+                        Image(systemName: "plus.circle.fill")
+                    }
+                    .accessibilityLabel("Create another carpool group")
+                }
+            }
+        }
+    }
+
+    private var activeParents: [GroupMember] {
+        store.groupMembers.filter { $0.status == .active && $0.role != .viewer }
+    }
+
+    private var scheduleReady: Bool {
+        guard store.calendarRegistration != nil, activeParents.count >= 2 else { return false }
+        let approvedNames = Set(store.approvedConstraints.map(\.parentName))
+        return activeParents.allSatisfy { approvedNames.contains($0.parentName) }
+    }
+
+    private var scheduleReadinessMessage: String {
+        if store.calendarRegistration == nil {
+            return "Upload the authoritative school calendar before publishing a schedule."
+        }
+        if activeParents.count < 2 {
+            return "At least two active driving parents are required."
+        }
+        let approvedNames = Set(store.approvedConstraints.map(\.parentName))
+        let missing = activeParents.filter { !approvedNames.contains($0.parentName) }.map(\.parentName)
+        if !missing.isEmpty {
+            return "Waiting for approved availability from: \(missing.joined(separator: ", "))."
+        }
+        return "Ready to publish."
+    }
+
+    private func roleColor(_ role: GroupRole) -> Color {
+        switch role {
+        case .owner: return KCPTheme.orange
+        case .admin: return KCPTheme.violet
+        case .parent: return KCPTheme.blue
+        case .viewer: return .secondary
+        }
+    }
+}
+
+private struct CreateGroupView: View {
+    @Environment(CarpoolStore.self) private var store
+    @Environment(\.dismiss) private var dismiss
+    @State private var name = "BASIS Phoenix Primary Carpool"
+    @State private var schoolName = "BASIS Phoenix Primary"
+    @State private var schoolKey = "basis-phoenix-primary"
+    @State private var academicYear = "2026-27"
+
+    var body: some View {
+        Form {
+            Section("Group") {
+                TextField("Group name", text: $name)
+                LabeledContent("School", value: schoolName)
+                LabeledContent("Academic year", value: academicYear)
+            } footer: {
+                Text("The pilot schedule engine and PDF verification are locked to the user-confirmed BASIS Phoenix Primary 2026–27 calendar. Multi-school onboarding is reserved for the hosted production phase.")
+            }
+            Section {
+                Button(store.isSyncing ? "Creating…" : "Create group") {
+                    Task {
+                        let created = await store.createGroup(
+                            name: name,
+                            schoolName: schoolName,
+                            schoolKey: schoolKey,
+                            academicYear: academicYear
+                        )
+                        if created { dismiss() }
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(store.isSyncing || name.trimmingCharacters(in: .whitespaces).isEmpty)
+            } footer: {
+                Text("The creator becomes the owner. Owners and admins can invite parents, upload one authoritative calendar, review constraints and publish schedule revisions.")
+            }
+        }
+        .navigationTitle("Create Group")
+    }
+}
+
+private struct InviteParentView: View {
+    @Environment(CarpoolStore.self) private var store
+    @Environment(\.dismiss) private var dismiss
+    @State private var parentName = ""
+    @State private var phone = ""
+    @State private var childName = ""
+    @State private var grade = 1
+    @State private var role: GroupRole = .parent
+
+    var body: some View {
+        Form {
+            Section("Parent") {
+                TextField("Parent name", text: $parentName)
+                TextField("Phone number", text: $phone).keyboardType(.phonePad)
+                Picker("Initial role", selection: $role) {
+                    Text("Parent").tag(GroupRole.parent)
+                    Text("Admin").tag(GroupRole.admin)
+                }
+            }
+            Section("Child") {
+                TextField("Child name", text: $childName)
+                Stepper("Grade \(grade)", value: $grade, in: 1...12)
+            }
+            Section {
+                Button(store.isSyncing ? "Creating invite…" : "Create invitation") {
+                    Task {
+                        let created = await store.sendInvitation(
+                            parentName: parentName,
+                            phone: phone,
+                            childName: childName,
+                            grade: grade,
+                            role: role
+                        )
+                        if created { dismiss() }
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(
+                    store.isSyncing ||
+                    parentName.trimmingCharacters(in: .whitespaces).isEmpty ||
+                    childName.trimmingCharacters(in: .whitespaces).isEmpty
+                )
+            } footer: {
+                Text("The invitation is stored in PostgreSQL with an expiry time and an audit event. The invitee's phone must match when one is provided.")
+            }
+        }
+        .navigationTitle("Invite Parent")
+    }
+}
+
+private struct AcceptInvitationView: View {
+    @Environment(CarpoolStore.self) private var store
+    @Environment(\.dismiss) private var dismiss
+    @State private var token = ""
+
+    var body: some View {
+        Form {
+            Section("Private invitation") {
+                TextField("Invitation code", text: $token)
+                    .textInputAutocapitalization(.characters)
+                    .autocorrectionDisabled()
+                    .font(.body.monospaced())
+                LabeledContent("Parent", value: store.currentParentName)
+                LabeledContent("Phone", value: store.phoneNumber.isEmpty ? "Sign in first" : store.phoneNumber)
+            }
+            Button(store.isSyncing ? "Joining…" : "Accept invitation") {
+                Task {
+                    let accepted = await store.acceptInvitation(token: token)
+                    if accepted { dismiss() }
+                }
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(store.isSyncing || token.trimmingCharacters(in: .whitespaces).isEmpty)
+        }
+        .navigationTitle("Accept Invite")
+    }
+}
+
+private struct GroupMembersView: View {
+    @Environment(CarpoolStore.self) private var store
+
+    var body: some View {
+        List {
+            ForEach(store.groupMembers.sorted { lhs, rhs in
+                if lhs.role == rhs.role { return lhs.parentName < rhs.parentName }
+                return roleRank(lhs.role) < roleRank(rhs.role)
+            }) { member in
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        ZStack {
+                            Circle().fill(KCPTheme.parentColor(member.parentName).opacity(0.14))
+                            Text(initials(member.parentName)).font(.caption.bold())
+                                .foregroundStyle(KCPTheme.parentColor(member.parentName))
+                        }
+                        .frame(width: 40, height: 40)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(member.parentName).font(.headline)
+                            Text("\(member.childName), Grade \(member.grade)")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Label(member.role.displayName, systemImage: member.role.symbol)
+                            .font(.caption.bold())
+                            .foregroundStyle(member.role == .owner ? KCPTheme.orange : KCPTheme.violet)
+                    }
+
+                    if store.isCurrentUserAdmin,
+                       member.parentName != store.currentParentName,
+                       member.role != .owner {
+                        Menu("Change role") {
+                            Button("Parent") { Task { await store.updateMemberRole(parentName: member.parentName, role: .parent) } }
+                            Button("Admin") { Task { await store.updateMemberRole(parentName: member.parentName, role: .admin) } }
+                            Button("Viewer") { Task { await store.updateMemberRole(parentName: member.parentName, role: .viewer) } }
+                        }
+                        .font(.caption.bold())
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+        }
+        .navigationTitle("Members & Admins")
+    }
+
+    private func roleRank(_ role: GroupRole) -> Int {
+        switch role { case .owner: return 0; case .admin: return 1; case .parent: return 2; case .viewer: return 3 }
+    }
+
+    private func initials(_ name: String) -> String {
+        name.split(separator: " ").prefix(2).compactMap(\.first).map(String.init).joined().uppercased()
+    }
+}
+
+private struct GroupInvitationsView: View {
+    @Environment(CarpoolStore.self) private var store
+
+    var body: some View {
+        List {
+            if store.groupInvitations.isEmpty {
+                ContentUnavailableView("No invitations yet", systemImage: "envelope")
+            }
+            ForEach(store.groupInvitations.sorted { $0.createdAt > $1.createdAt }) { invite in
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(invite.invitedParentName).font(.headline)
+                            Text("\(invite.childName), Grade \(invite.grade)")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Text(invite.status.displayName)
+                            .font(.caption.bold())
+                            .foregroundStyle(invite.status == .pending ? KCPTheme.orange : KCPTheme.green)
+                    }
+                    HStack {
+                        Text(invite.token).font(.body.monospaced().bold())
+                        Spacer()
+                        if invite.status == .pending {
+                            ShareLink(item: store.invitationShareText(invite)) {
+                                Label("Share", systemImage: "square.and.arrow.up")
+                            }
+                        }
+                    }
+                    Text("Invited by \(invite.invitedBy) • expires \(invite.expiresAt.formatted(date: .abbreviated, time: .omitted))")
+                        .font(.caption2).foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 4)
+            }
+        }
+        .navigationTitle("Invitations")
+    }
+}
+
+struct MyAvailabilityView: View {
+    @Environment(CarpoolStore.self) private var store
+    @State private var dropDays: Set<Int> = []
+    @State private var pickupDays: Set<Int> = []
+    @State private var notes = ""
+
+    var body: some View {
+        Form {
+            if let approved = store.approvedConstraint(for: store.currentParentName) {
+                Section("Currently approved") {
+                    LabeledContent("Morning drops", value: weekdaySummary(approved.dropWeekdays))
+                    LabeledContent("Afternoon pickups", value: weekdaySummary(approved.pickupWeekdays))
+                    LabeledContent("Constraint version", value: "v\(approved.version)")
+                }
+            }
+
+            if let request = store.latestConstraintRequest(for: store.currentParentName) {
+                Section("Latest request") {
+                    LabeledContent("Status", value: request.status.displayName)
+                    LabeledContent("Submitted", value: request.submittedAt.formatted(date: .abbreviated, time: .shortened))
+                    LabeledContent("Estimated affected trips", value: "\(request.existingAssignmentsAffected)")
+                    if let reviewer = request.reviewedBy { LabeledContent("Reviewed by", value: reviewer) }
+                    if let rejection = request.rejectionReason, !rejection.isEmpty {
+                        Text(rejection).font(.footnote).foregroundStyle(KCPTheme.red)
+                    }
+                }
+            }
+
+            availabilitySection(title: "Morning drop availability", selection: $dropDays, color: KCPTheme.orange)
+            availabilitySection(title: "Afternoon pickup availability", selection: $pickupDays, color: KCPTheme.violet)
+            Section("Notes or preferences") {
+                TextField("Example: Thursday preferred", text: $notes, axis: .vertical)
+            }
+            Section {
+                Button(store.isSyncing ? "Submitting…" : "Submit update request") {
+                    Task {
+                        await store.submitConstraintRequest(
+                            dropWeekdays: dropDays,
+                            pickupWeekdays: pickupDays,
+                            notes: notes
+                        )
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(store.isSyncing)
+            } footer: {
+                Text("The approved schedule is not silently overwritten. An admin reviews the request, the database stores the decision, and approval creates a new schedule version.")
+            }
+        }
+        .navigationTitle("My Availability")
+        .onAppear {
+            if let constraint = store.approvedConstraint(for: store.currentParentName) {
+                dropDays = constraint.dropWeekdays
+                pickupDays = constraint.pickupWeekdays
+                notes = constraint.notes
+            } else if let parent = store.parents.first(where: { $0.name == store.currentParentName }) {
+                dropDays = parent.effectiveDropWeekdays
+                pickupDays = parent.pickupWeekdays
+                notes = parent.notes ?? ""
+            }
+        }
+    }
+
+    private func availabilitySection(title: String, selection: Binding<Set<Int>>, color: Color) -> some View {
+        Section(title) {
+            ForEach(kcpWeekdays, id: \.0) { day, label in
+                Toggle(label, isOn: Binding(
+                    get: { selection.wrappedValue.contains(day) },
+                    set: { enabled in
+                        if enabled { selection.wrappedValue.insert(day) }
+                        else { selection.wrappedValue.remove(day) }
+                    }
+                ))
+                .tint(color)
+            }
+        }
+    }
+}
+
+private struct AllConstraintsView: View {
+    @Environment(CarpoolStore.self) private var store
+
+    var body: some View {
+        List {
+            ForEach(store.approvedConstraints.sorted { $0.parentName < $1.parentName }) { constraint in
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text(constraint.parentName).font(.headline)
+                        Spacer()
+                        Text("v\(constraint.version)").font(.caption.monospaced()).foregroundStyle(.secondary)
+                    }
+                    Label("Drop: \(weekdaySummary(constraint.dropWeekdays))", systemImage: "sunrise.fill")
+                        .font(.subheadline).foregroundStyle(KCPTheme.orange)
+                    Label("Pickup: \(weekdaySummary(constraint.pickupWeekdays))", systemImage: "sunset.fill")
+                        .font(.subheadline).foregroundStyle(KCPTheme.violet)
+                    if !constraint.notes.isEmpty {
+                        Text(constraint.notes).font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.vertical, 5)
+            }
+        }
+        .navigationTitle("Parent Constraints")
+    }
+}
+
+struct ConstraintRequestQueueView: View {
+    @Environment(CarpoolStore.self) private var store
+
+    var body: some View {
+        List {
+            let pending = store.constraintRequests.filter { $0.status == .pending }
+            if pending.isEmpty {
+                ContentUnavailableView(
+                    "No pending requests",
+                    systemImage: "checkmark.seal.fill",
+                    description: Text("New parent availability requests will appear here for any owner or admin.")
+                )
+            }
+            ForEach(pending.sorted { $0.submittedAt < $1.submittedAt }) { request in
+                NavigationLink { ConstraintReviewView(requestID: request.id) } label: {
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            Text(request.parentName).font(.headline)
+                            Spacer()
+                            Text("\(request.existingAssignmentsAffected) affected")
+                                .font(.caption.bold()).foregroundStyle(KCPTheme.orange)
+                        }
+                        Text("Drop: \(weekdaySummary(request.requestedDropWeekdays))")
+                            .font(.caption).foregroundStyle(.secondary)
+                        Text("Pickup: \(weekdaySummary(request.requestedPickupWeekdays))")
+                            .font(.caption).foregroundStyle(.secondary)
+                        Text(request.submittedAt.formatted(date: .abbreviated, time: .shortened))
+                            .font(.caption2).foregroundStyle(.tertiary)
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+        }
+        .navigationTitle("Approval Queue")
+    }
+}
+
+private struct ConstraintReviewView: View {
+    @Environment(CarpoolStore.self) private var store
+    @Environment(\.dismiss) private var dismiss
+    let requestID: UUID
+    @State private var reviewNote = ""
+
+    private var request: ConstraintChangeRequest? {
+        store.constraintRequests.first { $0.id == requestID }
+    }
+
+    var body: some View {
+        Form {
+            if let request {
+                Section("Requested by \(request.parentName)") {
+                    LabeledContent("Current drop", value: weekdaySummary(request.previousDropWeekdays))
+                    LabeledContent("Requested drop", value: weekdaySummary(request.requestedDropWeekdays))
+                    LabeledContent("Current pickup", value: weekdaySummary(request.previousPickupWeekdays))
+                    LabeledContent("Requested pickup", value: weekdaySummary(request.requestedPickupWeekdays))
+                    LabeledContent("Schedule impact", value: "\(request.existingAssignmentsAffected) future trips")
+                    if !request.notes.isEmpty { Text(request.notes).font(.footnote) }
+                }
+                Section("Admin note") {
+                    TextField("Optional approval/rejection note", text: $reviewNote, axis: .vertical)
+                }
+                Section {
+                    Button("Approve and create schedule version") {
+                        Task {
+                            await store.reviewConstraintRequest(requestID, approve: true, note: reviewNote)
+                            dismiss()
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(KCPTheme.green)
+
+                    Button("Reject request", role: .destructive) {
+                        Task {
+                            await store.reviewConstraintRequest(requestID, approve: false, note: reviewNote)
+                            dismiss()
+                        }
+                    }
+                }
+            }
+        }
+        .navigationTitle("Review Request")
+    }
+}
+
+private struct ScheduleVersionsView: View {
+    @Environment(CarpoolStore.self) private var store
+
+    var body: some View {
+        List {
+            ForEach(store.scheduleVersions.sorted { $0.version > $1.version }) { version in
+                VStack(alignment: .leading, spacing: 7) {
+                    HStack {
+                        Text("Version \(version.version)").font(.headline)
+                        Spacer()
+                        Text(version.status.displayName)
+                            .font(.caption.bold())
+                            .foregroundStyle(version.status == .published ? KCPTheme.green : KCPTheme.orange)
+                    }
+                    Text(version.reason).font(.subheadline)
+                    Text("Generated by \(version.generatedBy) • \(version.generatedAt.formatted(date: .abbreviated, time: .shortened))")
+                        .font(.caption).foregroundStyle(.secondary)
+                    if !version.changeSummary.isEmpty {
+                        Text(version.changeSummary.map { "\($0.key): \($0.value)" }.sorted().joined(separator: " • "))
+                            .font(.caption2).foregroundStyle(.tertiary)
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+        }
+        .navigationTitle("Schedule Versions")
+    }
+}
+
+private struct AuditTrailView: View {
+    @Environment(CarpoolStore.self) private var store
+
+    var body: some View {
+        List {
+            ForEach(store.auditEvents.sorted { $0.occurredAt > $1.occurredAt }) { event in
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(alignment: .firstTextBaseline) {
+                        Text(displayAction(event.action)).font(.headline)
+                        Spacer()
+                        Text(event.occurredAt.formatted(date: .abbreviated, time: .shortened))
+                            .font(.caption2).foregroundStyle(.secondary)
+                    }
+                    Text("\(event.actorName) • \(event.entityType)")
+                        .font(.caption).foregroundStyle(KCPTheme.violet)
+                    if !event.details.isEmpty {
+                        Text(event.details.map { "\($0.key): \($0.value)" }.sorted().joined(separator: " • "))
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+        }
+        .navigationTitle("Audit Trail")
+    }
+
+    private func displayAction(_ value: String) -> String {
+        value.replacingOccurrences(of: "_", with: " ").capitalized
+    }
+}
+
+let kcpWeekdays = [(2, "Monday"), (3, "Tuesday"), (4, "Wednesday"), (5, "Thursday"), (6, "Friday")]
+
+func weekdaySummary(_ days: Set<Int>) -> String {
+    if days.isEmpty { return "None" }
+    return kcpWeekdays.filter { days.contains($0.0) }.map { String($0.1.prefix(3)) }.joined(separator: ", ")
+}

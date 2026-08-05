@@ -1,0 +1,31 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: kcp
+      POSTGRES_USER: kcp
+      POSTGRES_PASSWORD: kcp_change_me
+    volumes:
+      - kcp_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kcp -d kcp"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  api:
+    build: .
+    environment:
+      DATABASE_URL: postgresql://kcp:kcp_change_me@db:5432/kcp
+      PILOT_GROUP_CODE: KCP-PHOENIX-2026
+      PILOT_OTP: "123456"
+    ports:
+      - "${KCP_PORT:-8090}:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  kcp_postgres:
