@@ -17,7 +17,12 @@ set search_path = public, pg_catalog
 as $$
 declare
     candidate text;
-    normalized_prefix text := upper(regexp_replace(coalesce(nullif(trim(p_prefix), ''), 'KCP'), '[^A-Z0-9]', '', 'g'));
+    normalized_prefix text := regexp_replace(
+        upper(coalesce(nullif(trim(p_prefix), ''), 'KCP')),
+        '[^A-Z0-9]',
+        '',
+        'g'
+    );
 begin
     if normalized_prefix = '' then
         normalized_prefix := 'KCP';
@@ -65,7 +70,7 @@ declare
     generated_group_code text;
     generated_invite_code text;
 begin
-    generated_group_code := public.kcp_random_code('TST');
+    generated_group_code := public.kcp_random_code('tst');
     generated_invite_code := public.kcp_random_invite_token();
 
     if generated_group_code !~ '^TST-[0-9A-F]{10}$' then
