@@ -1,0 +1,78 @@
+name: Validate KCP pilot
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - 'supabase/**'
+      - '.github/workflows/validate-pilot.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  client-and-migration-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Assemble and parse the PWA module
+        run: |
+          cat web/app.parts/*.js > /tmp/kcp-app.mjs
+          node --check /tmp/kcp-app.mjs
+          node --check web/logic.js
+      - name: Run client logic and visual contract tests
+        run: node --test web/tests/*.test.mjs
+      - name: Validate manifest and migration structure
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          json.loads(Path('web/manifest.webmanifest').read_text())
+          migrations = sorted(Path('supabase/migrations').glob('*.sql'))
+          assert migrations, 'No Supabase migrations found'
+          for migration in migrations:
+              text = migration.read_text()
+              assert text.count('$$') % 2 == 0, f'Unbalanced $$ in {migration}'
+              assert text.strip().endswith('commit;'), f'{migration} must end in commit;'
+          print(f'Validated {len(migrations)} migrations')
+          PY
+
+  fresh-supabase-database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v2
+        with:
+          version: 2.111.0
+          github-token: ${{ github.token }}
+      - name: Apply every migration to a fresh local Supabase database
+        run: supabase db start
+      - name: Fail on database lint findings
+        run: |
+          supabase db lint --local --level warning > /tmp/kcp-db-lint.json
+          cat /tmp/kcp-db-lint.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          raw = Path('/tmp/kcp-db-lint.json').read_text().strip()
+          findings = json.loads(raw or '[]')
+          if findings:
+              raise SystemExit(f'Database lint returned {len(findings)} finding(s)')
+          print('Database lint returned zero findings')
+          PY
+      - name: Run database regression and integration suites
+        run: |
+          DB_CONTAINER="$(docker ps --filter 'name=supabase_db_' --format '{{.Names}}' | head -1)"
+          test -n "$DB_CONTAINER"
+          docker exec -i "$DB_CONTAINER" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < supabase/tests/regression_20260806_usability.sql
+          docker exec -i "$DB_CONTAINER" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < supabase/tests/integration_generic_group_lifecycle.sql
+      - name: Show migration status
+        run: supabase migration list --local

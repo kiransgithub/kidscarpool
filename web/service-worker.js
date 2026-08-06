@@ -1,9 +1,11 @@
-const CACHE = 'kcp-pilot-v2-basis-seed'
+const CACHE = 'kcp-pilot-v3-usability-fixes'
 const SHELL = [
   './',
   './index.html',
   './styles.css',
+  './fixes.css',
   './app.js',
+  './logic.js',
   './config.js',
   './manifest.webmanifest',
   './icon-1024.png'
