@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#155eef">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="KCP">
+  <meta name="description" content="Private school carpool scheduling pilot">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" href="./icon-1024.png">
+  <link rel="stylesheet" href="./styles.css">
+  <title>Kidscarpool — KCP Pilot</title>
+</head>
+<body>
+  <div id="app" class="app-shell">
+    <header class="topbar">
+      <div class="brand-wrap">
+        <img class="brand-icon" src="./icon-1024.png" alt="KCP">
+        <div>
+          <div class="brand">KIDSCARPOOL</div>
+          <div class="tagline">Safe rides. Happy kids.</div>
+        </div>
+      </div>
+      <button id="installButton" class="icon-button hidden" type="button" aria-label="Install app">⇩</button>
+    </header>
+
+    <section id="connectionBanner" class="connection-banner hidden"></section>
+
+    <div id="activeGroupBar" class="group-bar hidden">
+      <div>
+        <span class="eyebrow">ACTIVE GROUP</span>
+        <strong id="activeGroupName">—</strong>
+      </div>
+      <button id="switchGroupButton" class="link-button" type="button">Switch</button>
+    </div>
+
+    <main id="mainContent" class="content" aria-live="polite">
+      <section id="loadingView" class="center-state">
+        <div class="spinner"></div>
+        <h1>Starting KCP…</h1>
+        <p>Connecting securely to the pilot database.</p>
+      </section>
+
+      <section id="onboardingView" class="view hidden">
+        <div class="hero-card">
+          <img src="./icon-1024.png" alt="KCP logo" class="hero-logo">
+          <h1>Welcome to Kidscarpool</h1>
+          <p>This free pilot uses a private, device-bound Supabase identity. No SMS charge is required.</p>
+        </div>
+
+        <div class="segmented" role="tablist">
+          <button class="segment active" data-onboarding-mode="profile" type="button">Start / Create group</button>
+          <button class="segment" data-onboarding-mode="invite" type="button">Join with invite</button>
+        </div>
+
+        <form id="profileForm" class="card form-card">
+          <h2>Parent profile</h2>
+          <label>Parent name<input id="profileName" required maxlength="80" autocomplete="name" placeholder="Kiran"></label>
+          <label>Phone number <span class="optional">not SMS-verified in pilot</span><input id="profilePhone" inputmode="tel" autocomplete="tel" placeholder="6025550100"></label>
+          <button class="primary-button" type="submit">Continue</button>
+        </form>
+
+        <form id="joinForm" class="card form-card hidden">
+          <h2>Join a private group</h2>
+          <label>Invited parent name<input id="joinName" required maxlength="80" autocomplete="name" placeholder="Mohan"></label>
+          <label>Phone number<input id="joinPhone" inputmode="tel" autocomplete="tel" placeholder="Use the number on the invitation"></label>
+          <label>8-character invitation code<input id="joinToken" required maxlength="12" autocapitalize="characters" autocomplete="one-time-code" placeholder="AB12CD34"></label>
+          <button class="primary-button" type="submit">Accept invitation</button>
+        </form>
+
+        <div class="privacy-note">Your anonymous Supabase session is retained on this device. Do not clear Safari website data during the pilot.</div>
+      </section>
+
+      <section id="homeView" class="view hidden" data-view="home">
+        <div class="welcome-row">
+          <div><span class="eyebrow">WELCOME</span><h1 id="welcomeName">Parent</h1></div>
+          <button class="refresh-button" data-action="refresh" type="button">↻</button>
+        </div>
+        <div id="noGroupHome" class="empty-card hidden">
+          <h2>Create or join a carpool group</h2>
+          <p>Your next drop and pickup will appear here after an admin publishes the schedule.</p>
+          <button class="primary-button" data-nav="groups" type="button">Open Groups</button>
+        </div>
+        <div id="nextTripsGrid" class="next-trips-grid">
+          <article id="nextDropCard" class="trip-focus-card morning"></article>
+          <article id="nextPickupCard" class="trip-focus-card pickup"></article>
+        </div>
+        <div id="homeAlerts" class="card"></div>
+      </section>
+
+      <section id="groupsView" class="view hidden" data-view="groups">
+        <div class="section-heading">
+          <div><span class="eyebrow">PRIVATE SPACES</span><h1>Your groups</h1></div>
+          <button class="primary-small" id="openCreateGroup" type="button">+ Group</button>
+        </div>
+        <div id="groupsList" class="stack"></div>
+        <div id="groupAdminPanel" class="stack hidden"></div>
+      </section>
+
+      <section id="scheduleView" class="view hidden" data-view="schedule">
+        <div class="section-heading"><div><span class="eyebrow">PUBLISHED PLAN</span><h1>Schedule</h1></div></div>
+        <div id="scheduleList" class="stack"></div>
+      </section>
+
+      <section id="volunteersView" class="view hidden" data-view="volunteers">
+        <div class="section-heading"><div><span class="eyebrow">HELP THE GROUP</span><h1>Volunteers</h1></div></div>
+        <div id="volunteerList" class="stack"></div>
+      </section>
+
+      <section id="leaderboardView" class="view hidden" data-view="leaderboard">
+        <div class="section-heading"><div><span class="eyebrow">FAIRNESS + FUN</span><h1>Leaderboard</h1></div></div>
+        <div id="leaderboardList" class="stack"></div>
+      </section>
+
+      <section id="calendarView" class="view hidden" data-view="calendar">
+        <div class="section-heading"><div><span class="eyebrow">SCHOOL YEAR</span><h1>Calendar</h1></div></div>
+        <div id="calendarAnalytics" class="analytics-grid"></div>
+        <div id="calendarActions" class="card"></div>
+        <div id="calendarTimeline" class="stack"></div>
+      </section>
+
+      <section id="settingsView" class="view hidden" data-view="settings">
+        <div class="section-heading"><div><span class="eyebrow">YOUR ACCOUNT</span><h1>Settings</h1></div></div>
+        <div id="profileCard" class="card"></div>
+        <div id="constraintsCard" class="card"></div>
+        <div id="adminQueue" class="stack"></div>
+        <div id="auditCard" class="card"></div>
+        <div class="card install-help">
+          <h2>Install on iPhone</h2>
+          <ol><li>Open this page in Safari.</li><li>Tap Share.</li><li>Choose <strong>Add to Home Screen</strong>.</li></ol>
+        </div>
+      </section>
+    </main>
+
+    <nav id="bottomNav" class="bottom-nav hidden" aria-label="Main navigation">
+      <button class="nav-item active" data-nav="home" type="button"><span>⌂</span><small>Home</small></button>
+      <button class="nav-item" data-nav="groups" type="button"><span>👥</span><small>Groups</small></button>
+      <button class="nav-item" data-nav="schedule" type="button"><span>▦</span><small>Schedule</small></button>
+      <button class="nav-item" data-nav="volunteers" type="button"><span>♡</span><small>Volunteer</small></button>
+      <button class="nav-item" data-nav="leaderboard" type="button"><span>★</span><small>Points</small></button>
+      <button class="nav-item" data-nav="calendar" type="button"><span>◫</span><small>Calendar</small></button>
+      <button class="nav-item" data-nav="settings" type="button"><span>⚙</span><small>Settings</small></button>
+    </nav>
+  </div>
+
+  <dialog id="createGroupDialog" class="modal">
+    <form id="createGroupForm" method="dialog" class="dialog-form">
+      <div class="dialog-title"><h2>Create carpool group</h2><button class="close-button" value="cancel" formmethod="dialog" aria-label="Close">×</button></div>
+      <label>Group name<input id="newGroupName" required placeholder="BASIS Primary Carpool"></label>
+      <label>School name<input id="newSchoolName" required value="BASIS Phoenix Primary"></label>
+      <label>Academic year<input id="newAcademicYear" required value="2026-27"></label>
+      <label>Your child<input id="newChildName" required placeholder="Thanishka"></label>
+      <label>Grade<input id="newChildGrade" required type="number" min="0" max="12" value="4"></label>
+      <button class="primary-button" type="submit">Create private group</button>
+    </form>
+  </dialog>
+
+  <dialog id="inviteDialog" class="modal">
+    <form id="inviteForm" method="dialog" class="dialog-form">
+      <div class="dialog-title"><h2>Invite another parent</h2><button class="close-button" value="cancel" formmethod="dialog" aria-label="Close">×</button></div>
+      <label>Parent name<input id="inviteName" required placeholder="Mohan"></label>
+      <label>Phone <span class="optional">optional</span><input id="invitePhone" inputmode="tel" placeholder="6025550101"></label>
+      <label>Child name<input id="inviteChild" required placeholder="Saanvi"></label>
+      <label>Grade<input id="inviteGrade" required type="number" min="0" max="12" value="5"></label>
+      <label>Role<select id="inviteRole"><option value="parent">Parent</option><option value="admin">Admin</option><option value="viewer">Viewer</option></select></label>
+      <button class="primary-button" type="submit">Create invitation</button>
+    </form>
+  </dialog>
+
+  <dialog id="tripDialog" class="modal"><div id="tripDialogContent"></div></dialog>
+  <div id="toast" class="toast hidden" role="status"></div>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
