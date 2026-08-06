@@ -1,0 +1,7 @@
+project_id = "xrzofopbknawqsqbiahk"
+
+[auth]
+enable_anonymous_sign_ins = true
+
+[storage]
+enabled = true
