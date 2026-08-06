@@ -1,0 +1,19 @@
+{
+  "name": "Kidscarpool — KCP Pilot",
+  "short_name": "KCP",
+  "description": "Private school carpool scheduling, volunteering, reminders and fairness.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#071a3d",
+  "theme_color": "#155eef",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "./icon-1024.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

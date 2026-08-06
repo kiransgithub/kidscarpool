@@ -1,92 +1,102 @@
-# Kidscarpool (KCP) Pilot v8 — Multi-Group Administration and Audit
+# Kidscarpool (KCP)
 
-This build repairs invitation creation and makes multiple carpool groups visible and switchable without losing the previously active group.
+Kidscarpool is a private school-carpool coordination pilot with group invitations, parent availability, admin approvals, one authoritative school calendar, fair schedule generation, volunteer coverage, trip-time controls, points, leaderboard, reminders, multi-group switching, and an append-only audit trail.
 
-## v8 highlights
+## Free cloud pilot — Supabase + GitHub Pages
 
-- Prominent **Groups** tab beside Home
-- Identity-scoped list of every active group the signed-in parent owns or has joined
-- Clear active-group indicator on Groups and Home
-- One-tap group switching
-- Create and join actions from the Groups tab
-- Separate persistent trip snapshots per group
-- Invitation HTTP 500 repair for upgraded pilot databases
-- Clear phone-conflict validation for invitations
-- Owner and multiple-admin roles
-- Parent invitation generation, sharing and acceptance
-- Per-parent drop/pickup constraints and admin approval workflow
-- Versioned schedule publication
-- One authoritative school calendar per group/school/year
-- Calendar analytics and duplicate-calendar prevention
-- Append-only PostgreSQL audit history
-- Existing trip time gates, reminders, volunteering, points and leaderboard
+The quickest way to test the MVP with several families **without paying for Apple Developer Program membership** is the installable web pilot:
 
-See `CHANGELOG_v8.md` for the exact invitation failure and repair.
+```text
+https://kiransgithub.github.io/kidscarpool/
+```
 
-## Upgrade the existing backend without deleting data
+On iPhone, open the URL in Safari and choose **Share → Add to Home Screen**. It launches like an app and connects to the shared Supabase database from any network.
 
-Do **not** use `docker compose down -v`; `-v` deletes the PostgreSQL volume.
+The web pilot includes:
+
+- device-bound Supabase anonymous authentication
+- private group creation and group switching
+- invitation creation, sharing and acceptance
+- Owner, Admin, Parent and Viewer roles
+- parent drop/pickup weekday constraints
+- admin approval queue
+- one authoritative calendar per group/school/year
+- verified BASIS Phoenix Primary 2026–27 PDF fingerprint
+- holiday, long-weekend, early-pickup and no-Late-Bird analytics
+- server-side fair schedule generation
+- cover requests and volunteer acceptance
+- server-enforced start/completion rules
+- 10 points for regular completed trips and 20 for volunteer trips
+- immutable database audit events
+
+See [`SUPABASE_PILOT_SETUP.md`](SUPABASE_PILOT_SETUP.md) for the one-time Supabase and GitHub Pages setup.
+
+> A native iOS `.ipa` downloaded from GitHub cannot be installed directly on arbitrary iPhones without Apple code signing. The PWA is the zero-cost, low-friction MVP distribution route. The native SwiftUI project remains available for Xcode device testing and a later TestFlight release.
+
+## Repository layout
+
+```text
+SchoolCarpool/                 Native SwiftUI application
+SchoolCarpool.xcodeproj/       Xcode project
+SchoolCarpoolTests/            Native scheduling tests
+backend/                       Previous laptop-hosted FastAPI/PostgreSQL pilot
+supabase/                      Version-controlled Supabase configuration/migrations
+web/                           Installable GitHub Pages PWA
+.github/workflows/             GitHub Pages deployment
+Reference/                     Authoritative pilot reference material
+```
+
+## Supabase deployment
+
+The ordered migrations are under:
+
+```text
+supabase/migrations/202608060001_kcp_core_rls.sql
+supabase/migrations/202608060002_kcp_onboarding_constraints.sql
+supabase/migrations/202608060003_kcp_calendar_schedule.sql
+supabase/migrations/202608060004_kcp_trips_storage_grants.sql
+```
+
+When Supabase's GitHub integration is connected to this repository with working directory `.`, changes merged to `main` deploy automatically. CLI alternative:
+
+```bash
+supabase login
+supabase link --project-ref xrzofopbknawqsqbiahk
+supabase db push
+```
+
+Anonymous Sign-Ins must be enabled once under **Supabase Dashboard → Authentication**.
+
+## Native SwiftUI pilot v8
+
+The native project currently includes:
+
+- prominent Groups tab beside Home
+- active-group indicator and one-tap switching
+- private invitations and multiple admins
+- per-parent constraints and approval workflow
+- versioned schedules
+- calendar duplicate protection and analytics
+- trip time gates, volunteering, points and leaderboard
+- local reminders and audit history
+
+Open `SchoolCarpool.xcodeproj`, choose your development team, select a physical iPhone, and Run.
+
+## Legacy laptop backend
+
+The `backend/` directory preserves the earlier FastAPI/PostgreSQL trial. It is useful for local development but no longer required for the Supabase web pilot.
 
 ```bash
 cd backend
-docker compose down
-find . -name '._*' -delete
-dot_clean . 2>/dev/null || true
 docker compose up --build -d
 curl http://localhost:8090/health
 ```
 
-Expected:
+Do not use `docker compose down -v` unless you intentionally want to delete its PostgreSQL volume.
 
-```json
-{"status":"ok","service":"kcp-pilot","version":"0.8.0"}
-```
+## Security boundary
 
-The startup migration changes `memberships.joined_at` to nullable so pending invitations can exist. Existing groups, memberships, calendars, trips, schedule versions and audit events remain in the Docker volume.
-
-## Verify the workflow
-
-```bash
-KCP_BASE_URL=http://127.0.0.1:8090 python3 backend/tests/workflow_smoke_test.py
-```
-
-The test creates two throwaway groups for one owner and verifies:
-
-- both appear in `GET /v1/groups`
-- owner-phone reuse returns HTTP 409 rather than HTTP 500
-- a valid invitation is created and accepted
-- the invited parent discovers the joined group
-- availability approval, second-admin promotion, calendar registration, duplicate prevention, schedule versioning and audit persistence work
-
-## Install v8 on an iPhone
-
-1. Open `SchoolCarpool.xcodeproj`.
-2. Select the `SchoolCarpool` target and your development team.
-3. Keep the existing bundle identifier if replacing the installed pilot.
-4. Select the physical iPhone and Run.
-5. Open **Settings → Central family database** and use the Mac LAN URL, such as `http://192.168.1.25:8090`.
-6. Open the new **Groups** tab and tap **Refresh my groups**.
-
-Find the Mac Wi-Fi IP with:
-
-```bash
-ipconfig getifaddr en0
-```
-
-Keep the Mac awake during a local-network trial:
-
-```bash
-caffeinate -dimsu
-```
-
-## Invitation rules
-
-- Use the invited parent's actual phone number, not the owner's phone.
-- Or leave the phone blank and share only the generated invitation code.
-- `123456` is the pilot OTP, not the invitation code.
-- The invitation code is generated by KCP and is eight characters.
-- The invited parent name must match the invitation spelling.
-
-## Pilot security boundary
-
-The laptop backend is suitable only for a controlled pilot on a trusted reachable network. It uses identity headers and a shared OTP. Before wider release, move the API and PostgreSQL database behind HTTPS with real authentication, short-lived tokens, remote push notification delivery, automated encrypted backups and production monitoring.
+- The Supabase publishable key is intentionally present in web/mobile client code.
+- Row Level Security plus authenticated user JWTs protect the data.
+- Never commit a database password, service-role key, secret key, Apple signing certificate, or provisioning profile.
+- Anonymous pilot accounts are device-bound. Before broader release, link them to verified email, phone, Sign in with Apple, or passkeys.
