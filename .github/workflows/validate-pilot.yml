@@ -42,3 +42,19 @@ jobs:
               assert text.strip().endswith('commit;'), f'{migration} must end in commit;'
           print(f'Validated {len(migrations)} migrations')
           PY
+
+  fresh-supabase-database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v2
+        with:
+          version: 2.111.0
+          github-token: ${{ github.token }}
+      - name: Apply every migration to a fresh local Supabase database
+        run: supabase db start
+      - name: Lint the resulting database
+        run: supabase db lint --local --level warning
+      - name: Show migration status
+        run: supabase migration list --local
