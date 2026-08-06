@@ -130,13 +130,13 @@ as $$
         greatest(
             g.updated_at,
             coalesce((select max(a.occurred_at) from public.kcp_audit_events a where a.group_id = g.id), g.updated_at)
-        )
+        ) as last_activity_at
     from public.kcp_memberships me
     join public.kcp_groups g on g.id = me.group_id
     where me.user_id = auth.uid()
       and me.status = 'active'
       and g.status = 'active'
-    order by last_activity_at desc;
+    order by 15 desc;
 $$;
 
 create or replace function public.kcp_create_invitation(
