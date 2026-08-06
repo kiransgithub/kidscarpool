@@ -54,7 +54,24 @@ jobs:
           github-token: ${{ github.token }}
       - name: Apply every migration to a fresh local Supabase database
         run: supabase db start
-      - name: Lint the resulting database
-        run: supabase db lint --local --level warning
+      - name: Fail on database lint findings
+        run: |
+          supabase db lint --local --level warning > /tmp/kcp-db-lint.json
+          cat /tmp/kcp-db-lint.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          raw = Path('/tmp/kcp-db-lint.json').read_text().strip()
+          findings = json.loads(raw or '[]')
+          if findings:
+              raise SystemExit(f'Database lint returned {len(findings)} finding(s)')
+          print('Database lint returned zero findings')
+          PY
+      - name: Run the canonical pilot database regression script
+        run: |
+          DB_CONTAINER="$(docker ps --filter 'name=supabase_db_' --format '{{.Names}}' | head -1)"
+          test -n "$DB_CONTAINER"
+          docker exec -i "$DB_CONTAINER" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < supabase/tests/regression_20260806_usability.sql
       - name: Show migration status
         run: supabase migration list --local
