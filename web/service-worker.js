@@ -1,4 +1,4 @@
-const CACHE = 'kcp-pilot-v1'
+const CACHE = 'kcp-pilot-v2-basis-seed'
 const SHELL = [
   './',
   './index.html',
