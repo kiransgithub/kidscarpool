@@ -1,0 +1,44 @@
+name: Validate KCP pilot
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - 'supabase/**'
+      - '.github/workflows/validate-pilot.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  client-and-migration-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Assemble and parse the PWA module
+        run: |
+          cat web/app.parts/*.js > /tmp/kcp-app.mjs
+          node --check /tmp/kcp-app.mjs
+          node --check web/logic.js
+      - name: Run client logic and visual contract tests
+        run: node --test web/tests/*.test.mjs
+      - name: Validate manifest and migration structure
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          json.loads(Path('web/manifest.webmanifest').read_text())
+          migrations = sorted(Path('supabase/migrations').glob('*.sql'))
+          assert migrations, 'No Supabase migrations found'
+          for migration in migrations:
+              text = migration.read_text()
+              assert text.count('$$') % 2 == 0, f'Unbalanced $$ in {migration}'
+              assert text.strip().endswith('commit;'), f'{migration} must end in commit;'
+          print(f'Validated {len(migrations)} migrations')
+          PY
