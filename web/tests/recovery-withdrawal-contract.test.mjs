@@ -48,8 +48,13 @@ test('open cover requests expose withdrawal without changing the existing trip l
   assert.match(fixes, /\.trip-detail-grid/)
 })
 
-test('service worker caches the persistent storage module and advances its cache version', async () => {
+test('service worker preserves durable access and advances with new app modules', async () => {
   const worker = await text('web/service-worker.js')
-  assert.match(worker, /kcp-pilot-v4-recovery-withdrawal/)
+  const version = worker.match(/kcp-pilot-v(\d+)-/)?.[1]
+
+  assert.ok(version, 'Service-worker cache must contain a numeric application version')
+  assert.ok(Number(version) >= 5, `Expected cache version 5 or newer, found ${version}`)
   assert.match(worker, /\.\/persistence\.js/)
+  assert.match(worker, /\.\/generic-schedule\.js/)
+  assert.match(worker, /\.\/generic-schedule\.css/)
 })
