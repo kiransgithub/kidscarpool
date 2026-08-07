@@ -27,17 +27,21 @@ jobs:
           node --check /tmp/kcp-app.mjs
           node --check web/logic.js
           node --check web/persistence.js
+          node --check web/generic-schedule.js
       - name: Run client logic and visual contract tests
         run: node --test web/tests/*.test.mjs
       - name: Validate manifest, ERD and migration structure
         run: |
           python3 - <<'PY'
           import json
+          import re
           from pathlib import Path
 
           json.loads(Path('web/manifest.webmanifest').read_text())
           erd = Path('docs/database-erd.md').read_text()
           assert '```mermaid' in erd and 'erDiagram' in erd, 'Database ERD is missing'
+          assert Path('web/generic-schedule.css').exists(), 'Generic schedule builder CSS is missing'
+          assert Path('web/generic-schedule.js').exists(), 'Generic schedule helper module is missing'
 
           migrations = sorted(Path('supabase/migrations').glob('*.sql'))
           assert migrations, 'No Supabase migrations found'
@@ -45,7 +49,20 @@ jobs:
               text = migration.read_text()
               assert text.count('$$') % 2 == 0, f'Unbalanced $$ in {migration}'
               assert text.strip().endswith('commit;'), f'{migration} must end in commit;'
-          print(f'Validated {len(migrations)} migrations')
+
+          # The scheduling engine must be data-driven. Domain-specific names are
+          # allowed in seed/test files, never in the generic schema or engine.
+          generic_engine = '\n'.join(
+              Path(path).read_text()
+              for path in [
+                  'supabase/migrations/202608060018_kcp_generic_schedule_schema.sql',
+                  'supabase/migrations/202608060019_kcp_generic_schedule_engine.sql'
+              ]
+          )
+          forbidden = re.compile(r'\b(Kiran|Mohan|Santhosh|Pavan|BASIS|DRMA)\b', re.I)
+          match = forbidden.search(generic_engine)
+          assert not match, f'Hard-coded scheduling identity found in generic engine: {match.group(0)}'
+          print(f'Validated {len(migrations)} migrations and genericity guard')
           PY
 
   fresh-supabase-database:
@@ -80,5 +97,6 @@ jobs:
           docker exec -i "$DB_CONTAINER" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < supabase/tests/regression_20260806_usability.sql
           docker exec -i "$DB_CONTAINER" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < supabase/tests/integration_generic_group_lifecycle.sql
           docker exec -i "$DB_CONTAINER" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < supabase/tests/integration_recovery_cover_withdrawal.sql
+          docker exec -i "$DB_CONTAINER" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < supabase/tests/integration_generic_schedule_builder.sql
       - name: Show migration status
         run: supabase migration list --local
