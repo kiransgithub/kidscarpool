@@ -1,12 +1,19 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4'
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './config.js'
+import {
+  kcpAuthStorage,
+  loadDeviceLinks,
+  saveDeviceLink,
+  removeDeviceLink
+} from './persistence.js'
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
-    storageKey: 'kcp-supabase-session'
+    storageKey: 'kcp-supabase-session',
+    storage: kcpAuthStorage
   }
 })
 
@@ -60,6 +67,7 @@ const state = {
   coverRequests: [],
   points: [],
   auditEvents: [],
+  deviceLinks: [],
   currentView: localStorage.getItem(VIEW_KEY) || 'home',
   constraintDraft: { drop: [], pickup: [], notes: '' },
   deferredInstallPrompt: null,
@@ -68,6 +76,74 @@ const state = {
 
 const el = id => document.getElementById(id)
 const qsa = selector => [...document.querySelectorAll(selector)]
+
+async function restoreRememberedMemberships() {
+  const links = await loadDeviceLinks()
+  state.deviceLinks = links
+  let restored = false
+
+  for (const link of links) {
+    const { data, error } = await supabase.rpc('kcp_restore_device_link', {
+      p_secret: link.secret
+    })
+
+    if (error) {
+      const message = error.message || ''
+      if (/invalid or revoked|not found|no longer exists/i.test(message)) {
+        state.deviceLinks = await removeDeviceLink(link.groupId)
+      } else if (!/Could not find the function|schema cache/i.test(message)) {
+        console.warn('KCP remembered-device recovery:', message)
+      }
+      continue
+    }
+
+    const restoredGroup = data?.[0]
+    if (restoredGroup?.group_id) {
+      localStorage.setItem(ACTIVE_GROUP_KEY, restoredGroup.group_id)
+      restored = true
+    }
+  }
+
+  return restored
+}
+
+async function rememberGroup(groupId, label = 'Installed KCP app') {
+  if (!groupId) return null
+
+  const links = await loadDeviceLinks()
+  const existing = links.find(item => item.groupId === groupId)
+  if (existing) {
+    state.deviceLinks = links
+    return existing
+  }
+
+  const { data, error } = await supabase.rpc('kcp_create_device_link', {
+    p_group_id: groupId,
+    p_label: label
+  })
+
+  if (error) {
+    if (!/Could not find the function|schema cache/i.test(error.message || '')) {
+      console.warn('KCP could not remember this group on the device:', error.message || error)
+    }
+    return null
+  }
+
+  const created = data?.[0]
+  if (!created?.device_secret) return null
+
+  state.deviceLinks = await saveDeviceLink({
+    groupId,
+    secret: created.device_secret
+  })
+  return state.deviceLinks.find(item => item.groupId === groupId) || null
+}
+
+async function ensureRememberedGroups(groups = state.groups) {
+  for (const group of groups || []) {
+    await rememberGroup(group.group_id)
+  }
+}
 
 window.addEventListener('beforeinstallprompt', event => {
   event.preventDefault()
@@ -106,13 +182,14 @@ async function init() {
       state.session = data.session
     }
 
+    await restoreRememberedMemberships()
     await loadProfile()
     hide('loadingView')
     if (!state.profile) {
       show('onboardingView')
       hide('bottomNav')
       hide('activeGroupBar')
-      showConnection('Connected — complete your pilot profile.', 'success')
+      showConnection('Connected — complete your pilot profile or restore an invitation.', 'success')
       return
     }
 
@@ -158,9 +235,12 @@ function bindStaticEvents() {
       })
       if (error) throw error
       await loadProfile()
-      if (data?.[0]?.group_id) localStorage.setItem(ACTIVE_GROUP_KEY, data[0].group_id)
+      if (data?.[0]?.group_id) {
+        localStorage.setItem(ACTIVE_GROUP_KEY, data[0].group_id)
+        await rememberGroup(data[0].group_id)
+      }
       await enterApp()
-    }, 'Invitation accepted')
+    }, 'Invitation accepted or restored on this device')
   })
 
   qsa('[data-nav]').forEach(button => button.addEventListener('click', () => navigate(button.dataset.nav)))
