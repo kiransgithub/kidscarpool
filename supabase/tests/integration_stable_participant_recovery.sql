@@ -3,12 +3,26 @@
 
 begin;
 
-set local session_replication_role = replica;
+insert into auth.users(
+    id, aud, role, raw_app_meta_data, raw_user_meta_data,
+    created_at, updated_at, is_anonymous
+)
+values
+    (
+        '51111111-1111-4111-8111-111111111111'::uuid,
+        'authenticated', 'authenticated', '{}'::jsonb, '{}'::jsonb,
+        now(), now(), true
+    ),
+    (
+        '52222222-2222-4222-8222-222222222222'::uuid,
+        'authenticated', 'authenticated', '{}'::jsonb, '{}'::jsonb,
+        now(), now(), true
+    );
+
 insert into public.kcp_profiles(id, display_name, phone)
 values
     ('51111111-1111-4111-8111-111111111111'::uuid, 'Recovery Driver', '6025550151'),
     ('52222222-2222-4222-8222-222222222222'::uuid, 'Recovery Driver', '6025550151');
-set local session_replication_role = origin;
 
 do $$
 declare
