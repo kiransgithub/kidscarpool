@@ -82,6 +82,66 @@ export function coverAcceptedLabel(request, memberships) {
   return member?.parent_name ? `Accepted by ${member.parent_name}` : 'Accepted by another approved driver'
 }
 
+export function normalizeRecoveryCode(value) {
+  return String(value || '').trim().toUpperCase()
+}
+
+export function recoveryErrorMessage(error) {
+  const raw = typeof error === 'string'
+    ? error
+    : String(error?.message || error || '').trim()
+
+  if (/invalid, expired, or already used/i.test(raw)) {
+    return 'This recovery code is invalid, expired, or already used. Issue a new one-time code in Supabase and try again.'
+  }
+  if (/current account already has an active membership/i.test(raw)) {
+    return 'This device already has active access to the group. Close this window and refresh Groups.'
+  }
+  if (/current parent profile does not match/i.test(raw)) {
+    return 'The parent name does not match the roster entry. Use the exact invited or roster name.'
+  }
+  if (/authentication required|complete the parent profile/i.test(raw)) {
+    return 'The pilot session is not ready. Reload the app once, then retry recovery.'
+  }
+  if (/failed to fetch|network|load failed/i.test(raw)) {
+    return 'KCP could not reach Supabase. Check the connection and retry; the recovery code is not consumed unless the server accepts it.'
+  }
+  return raw || 'Group recovery did not complete. Retry with a new one-time code.'
+}
+
+export function resolveRecoveryAttempt({ rpcData = null, rpcError = null, status = null } = {}) {
+  const recovered = Array.isArray(rpcData) ? rpcData[0] : rpcData
+
+  if (recovered?.group_id) {
+    return {
+      ok: true,
+      groupId: recovered.group_id,
+      groupCode: recovered.group_code || status?.group_code || '',
+      alreadyRecovered: false
+    }
+  }
+
+  // A network/client step can fail after PostgreSQL has already committed the
+  // one-time transfer. Treat the current-user roster state as an idempotent
+  // success so a consumed recovery code does not strand the user in the modal.
+  if (status?.claim_state === 'current_user' && status?.group_id) {
+    return {
+      ok: true,
+      groupId: status.group_id,
+      groupCode: status.group_code || '',
+      alreadyRecovered: true
+    }
+  }
+
+  return {
+    ok: false,
+    groupId: null,
+    groupCode: '',
+    alreadyRecovered: false,
+    message: recoveryErrorMessage(rpcError || 'Recovery did not return a group.')
+  }
+}
+
 function tripBucket(trip, momentMs, nowMs) {
   if (trip?.status === 'in_progress') return 0
   if (momentMs >= nowMs && !['completed', 'cancelled'].includes(trip?.status)) return 1

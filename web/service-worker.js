@@ -1,4 +1,4 @@
-const CACHE = 'kcp-pilot-v5-generic-schedule-builder'
+const CACHE = 'kcp-pilot-v6-recovery-dialog-feedback'
 const SHELL = [
   './',
   './index.html',
