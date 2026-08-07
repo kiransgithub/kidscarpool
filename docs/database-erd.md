@@ -1,12 +1,12 @@
 # Kidscarpool Supabase database ER diagram
 
-This diagram reflects the normalized KCP pilot schema after migration `202608060016`. Supabase `auth.users` owns authentication identities; `kcp_profiles` is the application profile keyed by the same UUID.
+This diagram reflects the normalized KCP pilot schema after migration `202608060017`. Supabase `auth.users` owns authentication identities; `kcp_profiles` is the application profile keyed by the same UUID.
 
 ```mermaid
 erDiagram
-    AUTH_USERS ||--|| KCP_PROFILES : "identity / profile"
+    AUTH_USERS ||--o| KCP_PROFILES : "identity / profile"
 
-    KCP_PROFILES ||--o{ KCP_GROUPS : creates
+    KCP_PROFILES |o--o{ KCP_GROUPS : creates
     KCP_GROUPS ||--o{ KCP_MEMBERSHIPS : contains
     KCP_PROFILES ||--o{ KCP_MEMBERSHIPS : joins
 
@@ -19,14 +19,14 @@ erDiagram
     KCP_PROFILES ||--o{ KCP_CONSTRAINT_REQUESTS : submits
 
     KCP_GROUPS ||--o{ KCP_ROSTER_SLOTS : preloads
-    KCP_PROFILES o|--o| KCP_ROSTER_SLOTS : claims
+    KCP_PROFILES |o--o{ KCP_ROSTER_SLOTS : claims
 
     KCP_GROUPS ||--o{ KCP_SCHOOL_CALENDARS : optionally_has
     KCP_SCHOOL_CALENDARS ||--o{ KCP_CALENDAR_EVENTS : contains
 
     KCP_GROUPS ||--o{ KCP_SCHEDULE_VERSIONS : publishes
     KCP_GROUPS ||--o{ KCP_TRIPS : schedules
-    KCP_PROFILES o|--o{ KCP_TRIPS : "scheduled / actual driver"
+    KCP_PROFILES |o--o{ KCP_TRIPS : "scheduled / actual driver"
 
     KCP_TRIPS ||--o{ KCP_COVER_REQUESTS : coverage
     KCP_PROFILES ||--o{ KCP_COVER_REQUESTS : "requests / accepts / cancels"
@@ -35,7 +35,7 @@ erDiagram
     KCP_PROFILES ||--o{ KCP_POINTS_LEDGER : earns
 
     KCP_GROUPS ||--o{ KCP_AUDIT_EVENTS : records
-    KCP_PROFILES o|--o{ KCP_AUDIT_EVENTS : acts
+    KCP_PROFILES |o--o{ KCP_AUDIT_EVENTS : acts
 
     KCP_GROUPS ||--o| KCP_GROUP_SNAPSHOTS : legacy_bridge
     KCP_GROUPS ||--o{ KCP_DEVICE_LINKS : remembers
@@ -51,7 +51,7 @@ erDiagram
     }
 
     KCP_PROFILES {
-        uuid id PK_FK
+        uuid id PK, FK
         text display_name
         text phone
         timestamptz created_at
@@ -80,8 +80,8 @@ erDiagram
     }
 
     KCP_MEMBERSHIPS {
-        uuid group_id PK_FK
-        uuid user_id PK_FK
+        uuid group_id PK, FK
+        uuid user_id PK, FK
         text parent_name
         text child_name
         int grade
@@ -107,8 +107,8 @@ erDiagram
     }
 
     KCP_CONSTRAINTS {
-        uuid group_id PK_FK
-        uuid user_id PK_FK
+        uuid group_id PK, FK
+        uuid user_id PK, FK
         smallint_array drop_weekdays
         smallint_array pickup_weekdays
         text notes
@@ -205,7 +205,7 @@ erDiagram
     KCP_POINTS_LEDGER {
         uuid id PK
         uuid group_id FK
-        uuid trip_id UK_FK
+        uuid trip_id UK, FK
         uuid user_id FK
         int points
         text reason
@@ -223,7 +223,7 @@ erDiagram
     }
 
     KCP_GROUP_SNAPSHOTS {
-        uuid group_id PK_FK
+        uuid group_id PK, FK
         jsonb snapshot
         uuid updated_by FK
     }
@@ -258,7 +258,7 @@ erDiagram
 - Only one points-ledger row is allowed per trip, preventing duplicate automatic or manual awards.
 - Only one open cover request is allowed per trip.
 - Device and one-time recovery secrets are never stored in plaintext. PostgreSQL stores SHA-256 hashes; plaintext is returned only once to the authorized client or Supabase project operator.
-- A membership recovery moves the active group membership and operational references to the replacement Auth UUID. The former membership is retained as `removed`, while historical audit actor IDs remain unchanged.
+- A membership recovery moves the active group membership and operational references to the replacement Auth UUID. The former membership is retained as `removed`, historical audit actor IDs remain unchanged, and old device credentials are revoked.
 
 ## Schedule lineage
 
