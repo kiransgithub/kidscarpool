@@ -3,13 +3,34 @@
 
 begin;
 
-set local session_replication_role = replica;
+-- Create real disposable Auth rows because recovery intentionally exercises
+-- the same auth.users -> kcp_profiles foreign key path used in production.
+insert into auth.users(
+    id, aud, role, raw_app_meta_data, raw_user_meta_data,
+    created_at, updated_at, is_anonymous
+)
+values
+    (
+        '31111111-1111-4111-8111-111111111111'::uuid,
+        'authenticated', 'authenticated', '{}'::jsonb, '{}'::jsonb,
+        now(), now(), true
+    ),
+    (
+        '32222222-2222-4222-8222-222222222222'::uuid,
+        'authenticated', 'authenticated', '{}'::jsonb, '{}'::jsonb,
+        now(), now(), true
+    ),
+    (
+        '33333333-3333-4333-8333-333333333333'::uuid,
+        'authenticated', 'authenticated', '{}'::jsonb, '{}'::jsonb,
+        now(), now(), true
+    );
+
 insert into public.kcp_profiles(id, display_name, phone)
 values
     ('31111111-1111-4111-8111-111111111111'::uuid, 'Kiran', '6025550131'),
     ('32222222-2222-4222-8222-222222222222'::uuid, 'Kiran', '6025550131'),
     ('33333333-3333-4333-8333-333333333333'::uuid, 'Kiran', '6025550131');
-set local session_replication_role = origin;
 
 do $$
 declare
@@ -18,6 +39,7 @@ declare
     v_restored constant uuid := '33333333-3333-4333-8333-333333333333'::uuid;
     v_group_id uuid;
     v_recovery_code text;
+    v_source_device_secret text;
     v_device_secret text;
     v_trip_id uuid;
     v_request_id uuid;
@@ -31,6 +53,12 @@ begin
     if v_group_id is null then raise exception 'Canonical BASIS group missing'; end if;
 
     perform public.kcp_bind_seeded_roster(v_group_id, v_source, 'Kiran', true);
+
+    perform set_config('request.jwt.claim.sub', v_source::text, true);
+    perform set_config('request.jwt.claim.role', 'authenticated', true);
+    select created.device_secret
+      into v_source_device_secret
+      from public.kcp_create_device_link(v_group_id, 'Previous Kiran device') created;
 
     select issued.recovery_code
       into v_recovery_code
@@ -67,6 +95,15 @@ begin
           and m.status = 'active'
     ) then
         raise exception 'Previous Kiran identity remained active after recovery';
+    end if;
+
+    if not exists (
+        select 1 from public.kcp_device_links dl
+        where dl.group_id = v_group_id
+          and dl.user_id = v_source
+          and dl.revoked_at is not null
+    ) then
+        raise exception 'Previous device credential was not revoked during recovery';
     end if;
 
     if (select r.claimed_user_id from public.kcp_roster_slots r
@@ -111,6 +148,25 @@ begin
           and m.status = 'active'
     ) then
         raise exception 'Recovered identity remained active after remembered-device restoration';
+    end if;
+
+    if not exists (
+        select 1 from public.kcp_device_links dl
+        where dl.group_id = v_group_id
+          and dl.user_id = v_restored
+          and dl.revoked_at is null
+          and dl.last_used_at is not null
+    ) then
+        raise exception 'Transferred remembered-device credential was not reactivated for the replacement identity';
+    end if;
+
+    if exists (
+        select 1 from public.kcp_device_links dl
+        where dl.group_id = v_group_id
+          and dl.user_id = v_recovered
+          and dl.revoked_at is null
+    ) then
+        raise exception 'Other recovered-device credentials remained active after identity transfer';
     end if;
 
     if not exists (
