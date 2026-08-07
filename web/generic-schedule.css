@@ -1,0 +1,338 @@
+/* Flexible schedule builder. Uses the existing KCP color tokens and cards. */
+
+.schedule-builder-modal {
+  width: min(96vw, 720px);
+  max-height: 94vh;
+}
+
+.schedule-builder-form {
+  display: grid;
+  gap: 16px;
+  max-height: 92vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 20px;
+}
+
+.schedule-builder-intro {
+  margin: -4px 0 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #eef4ff;
+  color: #344054;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.schedule-step-card {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+}
+
+.schedule-step-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.schedule-step-head h3 {
+  margin: 2px 0 0;
+  font-size: 18px;
+}
+
+.schedule-step-number {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--blue), var(--purple));
+  color: white;
+  font-weight: 950;
+}
+
+.schedule-basic-grid,
+.schedule-session-grid,
+.schedule-label-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 11px;
+}
+
+.schedule-basic-grid .full-width,
+.schedule-session-grid .full-width,
+.schedule-label-grid .full-width {
+  grid-column: 1 / -1;
+}
+
+.schedule-sessions-list {
+  display: grid;
+  gap: 12px;
+}
+
+.schedule-session-card {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 17px;
+  background: var(--surface-2);
+}
+
+.schedule-session-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 11px;
+}
+
+.schedule-session-head strong {
+  display: block;
+  margin-top: 3px;
+  font-size: 16px;
+}
+
+.icon-delete {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 11px;
+  background: #fee4e2;
+  color: #b42318;
+  font-size: 20px;
+}
+
+.ride-leg-toggle {
+  align-content: start;
+  padding: 11px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.ride-leg-toggle > span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ride-leg-toggle input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+}
+
+.strategy-help {
+  display: grid;
+  gap: 3px;
+  margin-top: 9px;
+  padding: 11px 13px;
+  border-radius: 13px;
+  background: #eef4ff;
+  color: #344054;
+  font-size: 12px;
+}
+
+.strategy-help strong {
+  color: var(--blue);
+}
+
+.weekly-bundle-hint {
+  margin: 10px 0 0;
+  padding: 11px 13px;
+  border-radius: 13px;
+  background: #ecfdf3;
+  color: #027a48;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.rotation-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.rotation-person {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 11px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-2);
+}
+
+.rotation-person > label {
+  display: flex;
+  grid-template-columns: none;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.rotation-person input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  flex: 0 0 20px;
+}
+
+.rotation-person span {
+  min-width: 0;
+}
+
+.rotation-person strong,
+.rotation-person small {
+  display: block;
+}
+
+.rotation-person small {
+  margin-top: 2px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.rotation-controls {
+  display: flex;
+  gap: 5px;
+}
+
+.rotation-controls button {
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--blue);
+  font-weight: 900;
+}
+
+.rotation-controls button:disabled {
+  opacity: .35;
+}
+
+.schedule-preview {
+  display: grid;
+  gap: 10px;
+}
+
+.schedule-preview-week {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+.schedule-preview-week-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 13px;
+  background: linear-gradient(90deg, #eef4ff, #f5f3ff);
+}
+
+.schedule-preview-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 13px;
+  border-top: 1px solid var(--line);
+}
+
+.schedule-preview-row strong,
+.schedule-preview-row span {
+  display: block;
+}
+
+.schedule-preview-row > div > span {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.schedule-builder-actions {
+  position: sticky;
+  bottom: -20px;
+  z-index: 4;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+  margin: 0 -20px -20px;
+  padding: 13px 20px calc(13px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  backdrop-filter: blur(16px);
+}
+
+.empty-card.compact {
+  padding: 16px;
+  box-shadow: none;
+}
+
+.empty-card.compact p {
+  margin: 0;
+}
+
+@media (max-width: 560px) {
+  .schedule-builder-modal {
+    width: 100vw;
+    max-width: none;
+    max-height: 100dvh;
+    height: 100dvh;
+    border-radius: 0;
+  }
+
+  .schedule-builder-form {
+    max-height: 100dvh;
+    height: 100dvh;
+    padding: calc(18px + env(safe-area-inset-top)) 15px 15px;
+  }
+
+  .schedule-basic-grid,
+  .schedule-session-grid,
+  .schedule-label-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .schedule-basic-grid .full-width,
+  .schedule-session-grid .full-width,
+  .schedule-label-grid .full-width {
+    grid-column: auto;
+  }
+
+  .schedule-builder-actions {
+    bottom: -15px;
+    margin: 0 -15px -15px;
+    padding-left: 15px;
+    padding-right: 15px;
+  }
+
+  .schedule-preview-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .schedule-builder-intro,
+  .strategy-help,
+  .schedule-preview-week-head {
+    background: #162d58;
+    color: #dbeafe;
+  }
+
+  .weekly-bundle-hint {
+    background: #123d2b;
+    color: #86efac;
+  }
+}
