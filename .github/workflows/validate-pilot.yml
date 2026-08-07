@@ -7,6 +7,7 @@ on:
     paths:
       - 'web/**'
       - 'supabase/**'
+      - 'docs/**'
       - '.github/workflows/validate-pilot.yml'
 
 permissions:
@@ -25,15 +26,19 @@ jobs:
           cat web/app.parts/*.js > /tmp/kcp-app.mjs
           node --check /tmp/kcp-app.mjs
           node --check web/logic.js
+          node --check web/persistence.js
       - name: Run client logic and visual contract tests
         run: node --test web/tests/*.test.mjs
-      - name: Validate manifest and migration structure
+      - name: Validate manifest, ERD and migration structure
         run: |
           python3 - <<'PY'
           import json
           from pathlib import Path
 
           json.loads(Path('web/manifest.webmanifest').read_text())
+          erd = Path('docs/database-erd.md').read_text()
+          assert '```mermaid' in erd and 'erDiagram' in erd, 'Database ERD is missing'
+
           migrations = sorted(Path('supabase/migrations').glob('*.sql'))
           assert migrations, 'No Supabase migrations found'
           for migration in migrations:
@@ -74,5 +79,6 @@ jobs:
           test -n "$DB_CONTAINER"
           docker exec -i "$DB_CONTAINER" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < supabase/tests/regression_20260806_usability.sql
           docker exec -i "$DB_CONTAINER" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < supabase/tests/integration_generic_group_lifecycle.sql
+          docker exec -i "$DB_CONTAINER" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < supabase/tests/integration_recovery_cover_withdrawal.sql
       - name: Show migration status
         run: supabase migration list --local
