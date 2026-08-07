@@ -1,12 +1,14 @@
-const CACHE = 'kcp-pilot-v4-recovery-withdrawal'
+const CACHE = 'kcp-pilot-v5-generic-schedule-builder'
 const SHELL = [
   './',
   './index.html',
   './styles.css',
   './fixes.css',
+  './generic-schedule.css',
   './app.js',
   './logic.js',
   './persistence.js',
+  './generic-schedule.js',
   './config.js',
   './manifest.webmanifest',
   './icon-1024.png'
