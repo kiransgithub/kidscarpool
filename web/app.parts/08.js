@@ -122,6 +122,7 @@ showTrip = function (tripId) {
 const kcpRememberedRenderSettings = renderSettings
 renderSettings = function () {
   kcpRememberedRenderSettings()
+  el('rememberedAccessCard')?.remove()
 
   const rememberedCount = state.deviceLinks?.length || 0
   const card = document.createElement('div')
