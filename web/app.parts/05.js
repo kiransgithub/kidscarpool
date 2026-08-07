@@ -3,6 +3,25 @@
 // existing functions instead of duplicating the main implementation.
 
 state.rosterSlots = []
+state.seededPilotStatus = null
+
+const kcpOriginalLoadGroups = loadGroups
+loadGroups = async function () {
+  await kcpOriginalLoadGroups()
+
+  try {
+    const { data, error } = await supabase.rpc('kcp_seeded_pilot_status')
+    if (error) throw error
+    state.seededPilotStatus = data?.[0] || null
+  } catch (error) {
+    if (!/Could not find the function|schema cache/i.test(error.message || '')) {
+      console.warn('KCP seeded pilot status:', error.message || error)
+    }
+    state.seededPilotStatus = null
+  }
+
+  await ensureRememberedGroups(state.groups)
+}
 
 const kcpOriginalLoadWorkspace = loadWorkspace
 loadWorkspace = async function () {
@@ -50,21 +69,55 @@ renderGroups = function () {
   kcpOriginalRenderGroups()
 
   const canonicalLoaded = state.groups.some(group => group.group_code === 'KCP-BASIS-2026-27')
-  const mayClaim = /^kiran\b/i.test(state.profile?.display_name || '') && !canonicalLoaded
-  if (!mayClaim) return
+  const isKiranProfile = /^kiran\b/i.test(state.profile?.display_name || '')
+  if (!isKiranProfile || canonicalLoaded) return
+
+  const status = state.seededPilotStatus
+  const claimState = status?.claim_state || 'unknown'
+  const cardState = {
+    available: {
+      badge: 'Ready',
+      title: 'BASIS Phoenix Primary Carpool',
+      description: 'The preloaded pilot is available for this Kiran profile.',
+      action: 'claim-basis-pilot',
+      button: 'Load the preconfigured group'
+    },
+    current_user: {
+      badge: 'Repair',
+      title: 'BASIS Phoenix Primary Carpool',
+      description: 'This device already owns the roster entry, but its active membership is not visible. Repair the group link without creating another profile.',
+      action: 'claim-basis-pilot',
+      button: 'Repair group access'
+    },
+    another_device: {
+      badge: 'Recovery needed',
+      title: 'BASIS Phoenix Primary Carpool',
+      description: 'This roster entry is linked to an earlier browser or device identity. Recover it with a one-time code instead of creating a duplicate Kiran profile.',
+      action: 'open-basis-recovery',
+      button: 'Recover group access'
+    },
+    unknown: {
+      badge: 'Update pending',
+      title: 'BASIS Phoenix Primary Carpool',
+      description: 'The database recovery migration has not been detected yet. Apply the latest Supabase migrations, then refresh.',
+      action: '',
+      button: 'Database update required'
+    }
+  }[claimState]
 
   const card = `
-    <article class="group-card active">
+    <article class="group-card active" data-seeded-claim-state="${escapeHTML(claimState)}">
       <div class="group-card-head">
         <div>
           <span class="eyebrow">PRELOADED PILOT</span>
-          <h2>BASIS Phoenix Primary Carpool</h2>
+          <h2>${escapeHTML(cardState.title)}</h2>
           <div class="meta">2026–27 · schedule begins Monday, Aug 10</div>
         </div>
-        <span class="status-pill info">Ready</span>
+        <span class="status-pill info">${escapeHTML(cardState.badge)}</span>
       </div>
       <p class="meta">Includes the authoritative holiday calendar, four-family roster, pickup tags, 177 school days, 354 trips, and the agreed weekday/Friday rotation.</p>
-      <button class="primary-button" data-action="claim-basis-pilot" type="button">Load the preconfigured group</button>
+      <p class="meta">${escapeHTML(cardState.description)}</p>
+      <button class="primary-button" ${cardState.action ? `data-action="${cardState.action}"` : 'disabled'} type="button">${escapeHTML(cardState.button)}</button>
     </article>`
   el('groupsList').insertAdjacentHTML('afterbegin', card)
 }
@@ -115,16 +168,27 @@ showTrip = function (tripId) {
 }
 
 document.addEventListener('click', async event => {
-  const button = event.target.closest('[data-action="claim-basis-pilot"]')
+  const button = event.target.closest('[data-action="claim-basis-pilot"], [data-action="open-basis-recovery"]')
   if (!button) return
   event.preventDefault()
+
+  if (button.dataset.action === 'open-basis-recovery') {
+    el('recoverGroupCode').value = 'KCP-BASIS-2026-27'
+    el('recoverParentName').value = state.profile?.display_name || 'Kiran'
+    el('recoverCode').value = ''
+    el('recoverGroupDialog').showModal()
+    return
+  }
 
   try {
     await runAction(async () => {
       const { data, error } = await supabase.rpc('kcp_claim_basis_pilot')
       if (error) throw error
       const claimed = data?.[0]
-      if (claimed?.group_id) localStorage.setItem(ACTIVE_GROUP_KEY, claimed.group_id)
+      if (claimed?.group_id) {
+        localStorage.setItem(ACTIVE_GROUP_KEY, claimed.group_id)
+        await rememberGroup(claimed.group_id)
+      }
       await refreshAll()
       navigate('groups')
     }, 'BASIS pilot group loaded with the published schedule')

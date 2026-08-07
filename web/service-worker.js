@@ -1,4 +1,4 @@
-const CACHE = 'kcp-pilot-v3-usability-fixes'
+const CACHE = 'kcp-pilot-v4-recovery-withdrawal'
 const SHELL = [
   './',
   './index.html',
@@ -6,6 +6,7 @@ const SHELL = [
   './fixes.css',
   './app.js',
   './logic.js',
+  './persistence.js',
   './config.js',
   './manifest.webmanifest',
   './icon-1024.png'

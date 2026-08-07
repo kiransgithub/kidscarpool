@@ -48,12 +48,12 @@
         <div class="hero-card">
           <img src="./icon-1024.png" alt="KCP logo" class="hero-logo">
           <h1>Welcome to Kidscarpool</h1>
-          <p>This free pilot uses a private, device-bound Supabase identity. No SMS charge is required.</p>
+          <p>The installed app remembers your Supabase session and private group access on this device. No SMS charge is required.</p>
         </div>
 
         <div class="segmented" role="tablist">
           <button class="segment active" data-onboarding-mode="profile" type="button">Start / Create group</button>
-          <button class="segment" data-onboarding-mode="invite" type="button">Join with invite</button>
+          <button class="segment" data-onboarding-mode="invite" type="button">Join / restore with invite</button>
         </div>
 
         <form id="profileForm" class="card form-card">
@@ -64,14 +64,15 @@
         </form>
 
         <form id="joinForm" class="card form-card hidden">
-          <h2>Join a private group</h2>
+          <h2>Join or restore a private group</h2>
+          <p class="meta">Use the original invitation again when moving to a new browser/device identity. KCP transfers that group membership instead of creating a duplicate parent.</p>
           <label>Invited parent name<input id="joinName" required maxlength="80" autocomplete="name" placeholder="Mohan"></label>
           <label>Phone number<input id="joinPhone" inputmode="tel" autocomplete="tel" placeholder="Use the number on the invitation"></label>
           <label>8-character invitation code<input id="joinToken" required maxlength="12" autocapitalize="characters" autocomplete="one-time-code" placeholder="AB12CD34"></label>
-          <button class="primary-button" type="submit">Accept invitation</button>
+          <button class="primary-button" type="submit">Join or restore access</button>
         </form>
 
-        <div class="privacy-note">Your anonymous Supabase session is retained on this device. Do not clear Safari website data during the pilot.</div>
+        <div class="privacy-note">Normal app restarts should not ask again. Clearing all Safari/PWA website data removes the local session; use the original invitation or an owner recovery code to restore access.</div>
       </section>
 
       <section id="homeView" class="view hidden" data-view="home">
@@ -198,6 +199,17 @@
       <label>Grade<input id="inviteGrade" required type="number" min="0" max="12" value="5"></label>
       <label>Role<select id="inviteRole"><option value="parent">Parent</option><option value="admin">Admin</option><option value="viewer">Viewer</option></select></label>
       <button class="primary-button" type="submit">Create invitation</button>
+    </form>
+  </dialog>
+
+  <dialog id="recoverGroupDialog" class="modal">
+    <form id="recoverGroupForm" method="dialog" class="dialog-form">
+      <div class="dialog-title"><h2>Recover group access</h2><button class="close-button" value="cancel" formmethod="dialog" aria-label="Close">×</button></div>
+      <p class="optional-calendar-note">Use the one-time code issued from the Supabase SQL Editor. Recovery moves the roster entry and active trips from the earlier anonymous identity to this installed app; it does not create a second active parent.</p>
+      <label>Group code<input id="recoverGroupCode" required value="KCP-BASIS-2026-27" autocapitalize="characters"></label>
+      <label>Parent name<input id="recoverParentName" required value="Kiran" autocomplete="name"></label>
+      <label>One-time recovery code<input id="recoverCode" required maxlength="32" autocapitalize="characters" autocomplete="one-time-code" placeholder="REC-XXXXXXXX-XXXXXXXX"></label>
+      <button class="primary-button" type="submit">Recover and remember this device</button>
     </form>
   </dialog>
 
