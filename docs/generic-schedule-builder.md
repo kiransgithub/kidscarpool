@@ -46,7 +46,7 @@ Every second Tuesday
 | Rotate every ride | Individual outbound/return leg | Every trip advances to the next driver |
 | Rotate every day | All rides on one date | One parent handles drop and pickup that day |
 | Rotate by week | All configured rides in the calendar week | One parent handles multiple activity days that week |
-| Balance automatically | Individual trip with running counts | General fairness scheduling |
+| Balance automatically | Individual trip | Even distribution across selected drivers in the generated plan |
 | Assign later | No automatic driver | Admin or volunteers fill coverage later |
 
 ### Weekly bundled rotation
@@ -82,7 +82,7 @@ The admin also chooses what happens when a week has no rides:
 5. Creates schedule-plan version 1 as a draft.
 6. Writes the audit event.
 
-A partial unique index allows exactly one active Owner per group. The Owner can immediately open the schedule builder and publish even when no other parent has joined. Multiple Admins are supported.
+A deferred constraint trigger validates that every group with active members finishes the transaction with exactly one active Owner. Deferring the check permits an atomic account-recovery transaction to insert the replacement Owner and remove the former Owner without exposing an invalid committed state. The Owner can immediately open the schedule builder and publish even when no other parent has joined. Multiple Admins are supported.
 
 ## Stable identity
 
@@ -126,6 +126,7 @@ The suite verifies:
 
 - creator becomes the single active Owner
 - Owner can configure and publish without a calendar
+- ownership transfer remains atomic during account recovery
 - independent evening times per weekday
 - outbound-only, return-only, and both-leg validation
 - weekly responsibility bundles
