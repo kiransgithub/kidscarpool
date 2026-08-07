@@ -50,6 +50,35 @@
   line-height: 1.45;
 }
 
+.recovery-dialog-status {
+  margin: 0;
+  padding: 11px 13px;
+  border: 1px solid transparent;
+  border-radius: 13px;
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.recovery-dialog-status.info {
+  border-color: #84adff;
+  background: #eef4ff;
+  color: #194185;
+}
+
+.recovery-dialog-status.success {
+  border-color: #75e0a7;
+  background: #ecfdf3;
+  color: #05603a;
+}
+
+.recovery-dialog-status.error {
+  border-color: #fda29b;
+  background: #fef3f2;
+  color: #912018;
+}
+
 .action-button[disabled],
 .primary-button[disabled] {
   cursor: not-allowed;
@@ -206,9 +235,12 @@
 
 @media (prefers-color-scheme: dark) {
   .checkbox-chip:has(input:checked),
-  .optional-calendar-note { background: #162d58; color: #dbeafe; }
-  .cover-acceptance { background: #123d2b; color: #86efac; }
+  .optional-calendar-note,
+  .recovery-dialog-status.info { background: #162d58; color: #dbeafe; border-color: #2e5fae; }
+  .cover-acceptance,
+  .recovery-dialog-status.success { background: #123d2b; color: #86efac; border-color: #287a52; }
   .trip-auto-note { background: #4a3412; color: #fde68a; }
+  .recovery-dialog-status.error { background: #501b1b; color: #fecaca; border-color: #9f3434; }
 }
 
 /* Long configuration forms remain contained and scrollable on small iPhones. */
