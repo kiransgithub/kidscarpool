@@ -1,6 +1,6 @@
 # Kidscarpool Supabase database ER diagram
 
-This diagram reflects the normalized KCP pilot schema through migration `202608060019`. Supabase `auth.users` owns authentication identities. `kcp_profiles` is the application profile keyed by the same UUID, while `kcp_group_participants` is the stable operational identity used by schedules and trips.
+This diagram reflects the normalized KCP pilot schema through migration `202608060025`. Supabase `auth.users` owns authentication identities. `kcp_profiles` is the application profile keyed by the same UUID, while `kcp_group_participants` is the stable operational identity used by schedules and trips.
 
 ```mermaid
 erDiagram
