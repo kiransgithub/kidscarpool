@@ -50,15 +50,19 @@ jobs:
               assert text.count('$$') % 2 == 0, f'Unbalanced $$ in {migration}'
               assert text.strip().endswith('commit;'), f'{migration} must end in commit;'
 
-          # The scheduling engine must be data-driven. Domain-specific names are
-          # allowed in seed/test files, never in the generic schema or engine.
-          generic_engine = '\n'.join(
-              Path(path).read_text()
-              for path in [
-                  'supabase/migrations/202608060018_kcp_generic_schedule_schema.sql',
-                  'supabase/migrations/202608060019_kcp_generic_schedule_engine.sql'
-              ]
-          )
+          # Production scheduling is data-driven. Domain-specific identities are
+          # allowed only in seed/test fixtures, never in the generic schema,
+          # editor, occurrence resolver, publisher or legacy-import adapter.
+          generic_paths = [
+              'supabase/migrations/202608060018_kcp_generic_schedule_schema.sql',
+              'supabase/migrations/202608060022_kcp_generic_schedule_drafts.sql',
+              'supabase/migrations/202608060023_kcp_generic_schedule_occurrences.sql',
+              'supabase/migrations/202608060024_kcp_generic_schedule_publish.sql',
+              'supabase/migrations/202608060025_kcp_generic_schedule_legacy_import.sql'
+          ]
+          for path in generic_paths:
+              assert Path(path).exists(), f'Missing generic scheduling migration: {path}'
+          generic_engine = '\n'.join(Path(path).read_text() for path in generic_paths)
           forbidden = re.compile(r'\b(Kiran|Mohan|Santhosh|Pavan|BASIS|DRMA)\b', re.I)
           match = forbidden.search(generic_engine)
           assert not match, f'Hard-coded scheduling identity found in generic engine: {match.group(0)}'
