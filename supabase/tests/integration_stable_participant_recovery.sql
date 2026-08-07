@@ -31,7 +31,7 @@ declare
     target_group uuid;
     stable_participant uuid;
     target_plan uuid;
-    schedule_version integer;
+    v_schedule_version integer;
     participant_count integer;
     active_owner_count integer;
 begin
@@ -80,7 +80,7 @@ begin
     );
 
     select public.kcp_publish_schedule_plan(target_plan, 'Recovery identity regression')
-      into schedule_version;
+      into v_schedule_version;
 
     perform public.kcp_transfer_group_membership(
         target_group,
@@ -133,7 +133,7 @@ begin
         select 1
         from public.kcp_trips trip
         where trip.group_id = target_group
-          and trip.schedule_version = schedule_version
+          and trip.schedule_version = v_schedule_version
           and (
               trip.scheduled_participant_id <> stable_participant
               or trip.scheduled_driver_id <> target_user
