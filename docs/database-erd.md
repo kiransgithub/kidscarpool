@@ -1,6 +1,6 @@
 # Kidscarpool Supabase database ER diagram
 
-This diagram reflects the normalized KCP pilot schema through migration `202608060025`. Supabase `auth.users` owns authentication identities. `kcp_profiles` is the application profile keyed by the same UUID, while `kcp_group_participants` is the stable operational identity used by schedules and trips.
+This diagram reflects the normalized KCP pilot schema through migration `202608060026`. Supabase `auth.users` owns authentication identities. `kcp_profiles` is the application profile keyed by the same UUID, while `kcp_group_participants` is the stable operational identity used by schedules and trips.
 
 ```mermaid
 erDiagram
@@ -398,7 +398,7 @@ flowchart LR
 
 - Every user-facing application table has Row-Level Security enabled. Parents can read only groups in which they have an active membership.
 - A fresh group is created atomically with the creator as the single active Owner and with an initial draft schedule plan.
-- A partial unique index permits only one active Owner membership per group. Multiple Admins remain supported.
+- A deferred constraint trigger requires every group with active members to finish a transaction with exactly one active Owner. This allows atomic owner recovery/transfer while preventing a committed zero-owner or multi-owner state. Multiple Admins remain supported.
 - `kcp_group_participants` is the stable operational identity. An anonymous Auth UUID can be recovered or replaced without changing schedule-plan membership or historical participant assignments.
 - Recurring sessions store times per weekday/session. They support any clock time, drop-only, pickup-only, both legs, multi-week intervals, and return legs up to two days later.
 - Assignment strategies are data, not hard-coded branches: fixed, per-trip rotation, per-day rotation, per-week bundled rotation, balanced, and manual.
