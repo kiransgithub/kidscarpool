@@ -29,6 +29,7 @@ jobs:
           node --check web/logic.js
           node --check web/persistence.js
           node --check web/generic-schedule.js
+          node --check web/support/app.js
       - name: Run client logic and visual contract tests
         run: node --test web/tests/*.test.mjs
       - name: Validate manifest, ERD, runtime and migration lineage
@@ -49,6 +50,9 @@ jobs:
               'web/schedule-builder-usability.css',
               'web/weekly-matrix-flow.css',
               'web/account-auth.css',
+              'web/support/index.html',
+              'web/support/app.js',
+              'web/support/styles.css',
               'web/app.parts/12-weekly-matrix-flow.js',
               'web/app.parts/13-published-availability.js',
               'web/app.parts/14-database-driven-ui.js',
@@ -56,7 +60,8 @@ jobs:
               'web/app.parts/16-role-action-guard.js',
               'web/app.parts/17-database-state-sync.js',
               'web/app.parts/18-permanent-auth.js',
-              'web/app.parts/18a-account-styles.js'
+              'web/app.parts/18a-account-styles.js',
+              'web/app.parts/19-platform-admin.js'
           ]
           for asset in required_assets:
               assert Path(asset).exists(), f'Missing required client asset: {asset}'
@@ -107,7 +112,7 @@ jobs:
 
           assert "p_scheduled - interval '10 minutes'" in executable_sql
           assert "p_scheduled + interval '90 minutes'" in executable_sql
-          print(f'Validated {len(migrations)} linked migration(s), baseline, runtime and genericity guards')
+          print(f'Validated {len(migrations)} linked migration(s), baseline, runtime and support assets')
           PY
 
   fresh-supabase-database:
@@ -151,5 +156,6 @@ jobs:
           run_sql "group lifecycle end to end" supabase/tests/integration_group_lifecycle.sql
           run_sql "weekend schedule and availability" supabase/tests/regression_weekend_schedule.sql
           run_sql "permanent identity and devices" supabase/tests/integration_permanent_identity.sql
+          run_sql "platform Super Admin and support" supabase/tests/integration_platform_admin.sql
       - name: Show migration status
         run: supabase migration list --local
