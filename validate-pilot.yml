@@ -1,0 +1,116 @@
+name: Validate KCP pilot
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - 'supabase/**'
+      - 'docs/**'
+      - '.github/workflows/validate-pilot.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  client-and-migration-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Assemble and parse the PWA module
+        run: |
+          cat web/app.parts/*.js > /tmp/kcp-app.mjs
+          node --check /tmp/kcp-app.mjs
+          node --check web/logic.js
+          node --check web/persistence.js
+          node --check web/generic-schedule.js
+      - name: Run client logic and visual contract tests
+        run: node --test web/tests/*.test.mjs
+      - name: Validate manifest, ERD and migration structure
+        run: |
+          python3 - <<'PY'
+          import json
+          import re
+          from pathlib import Path
+
+          json.loads(Path('web/manifest.webmanifest').read_text())
+
+          erd = Path('docs/database-erd.md').read_text()
+          assert '```mermaid' in erd and 'erDiagram' in erd, 'Database ERD is missing'
+          # The ERD must describe the schema that actually ships. Tables removed
+          # by the baseline must not linger in the diagram.
+          for gone in ('KCP_MEMBERSHIPS', 'KCP_ROSTER_SLOTS', 'KCP_GROUP_SNAPSHOTS',
+                       'KCP_SCHEDULE_VERSIONS', 'KCP_DEVICE_LINKS',
+                       'KCP_RECOVERY_CHALLENGES', 'KCP_CONSTRAINT_REQUESTS'):
+              assert gone not in erd, f'ERD still documents removed table {gone}'
+
+          assert Path('web/generic-schedule.css').exists(), 'Generic schedule builder CSS is missing'
+          assert Path('web/generic-schedule.js').exists(), 'Generic schedule helper module is missing'
+
+          migrations = sorted(Path('supabase/migrations').glob('*.sql'))
+          assert migrations, 'No Supabase migrations found'
+          for migration in migrations:
+              text = migration.read_text()
+              assert text.count('$$') % 2 == 0, f'Unbalanced $$ in {migration}'
+              assert text.strip().endswith('commit;'), f'{migration} must end in commit;'
+
+          seeds = sorted(Path('supabase/seeds').glob('*.sql'))
+          assert seeds, 'No seed files found under supabase/seeds/'
+
+          # Production scheduling is data-driven. Domain-specific identities are
+          # allowed only in seed/test fixtures, never in the shipped schema.
+          # Comments are documentation, not code, so they are stripped first.
+          engine = '\n'.join(m.read_text() for m in migrations)
+          engine = re.sub(r'(?m)^\s*--.*$', '', engine)
+          forbidden = re.compile(r'\b(Kiran|Mohan|Santhosh|Pavan|BASIS|DRMA)\b', re.I)
+          match = forbidden.search(engine)
+          assert not match, f'Hard-coded scheduling identity in schema: {match.group(0)}'
+
+          # Fail loudly if the guard is ever pointed at nothing, which would let
+          # it pass while checking no code at all.
+          assert len(engine) > 20000, 'Genericity guard is scanning an empty engine'
+
+          print(f'Validated {len(migrations)} migration(s), {len(seeds)} seed(s), genericity guard live')
+          PY
+
+  fresh-supabase-database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v2
+        with:
+          version: 2.111.0
+          github-token: ${{ github.token }}
+      - name: Apply every migration to a fresh local Supabase database
+        run: supabase db start
+      - name: Fail on database lint findings
+        run: |
+          supabase db lint --local --level warning > /tmp/kcp-db-lint.json
+          cat /tmp/kcp-db-lint.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          raw = Path('/tmp/kcp-db-lint.json').read_text().strip()
+          findings = json.loads(raw or '[]')
+          if findings:
+              raise SystemExit(f'Database lint returned {len(findings)} finding(s)')
+          print('Database lint returned zero findings')
+          PY
+      - name: Run the database test suite against Supabase
+        run: |
+          DB_CONTAINER="$(docker ps --filter 'name=supabase_db_' --format '{{.Names}}' | head -1)"
+          test -n "$DB_CONTAINER"
+          docker cp supabase "$DB_CONTAINER":/tmp/kcp-supabase
+          docker exec -e KCP_MODE=supabase -e PGDATABASE=postgres \
+            -w /tmp -i "$DB_CONTAINER" bash -c '
+              mkdir -p /tmp/kcp/supabase
+              cp -R /tmp/kcp-supabase/. /tmp/kcp/supabase/
+              cd /tmp/kcp && bash supabase/tests/run_all.sh'
+      - name: Show migration status
+        run: supabase migration list --local
