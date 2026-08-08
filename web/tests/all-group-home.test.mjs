@@ -13,7 +13,7 @@ test('primary navigation contains exactly five consumer destinations', () => {
   assert.match(source, /Requests/)
   assert.match(source, /Groups/)
   assert.match(source, /More/)
-  assert.match(source, /grid-template-columns:\s*repeat\(5/)
+  assert.match(styles, /grid-template-columns:\s*repeat\(5/)
 })
 
 test('Home and Schedule load rides across every active group membership', () => {
