@@ -1105,8 +1105,8 @@ create or replace function public.kcp_can_start_trip_at(
 returns boolean
 language sql immutable as $$
     select p_scheduled is not null
-       and p_now >= p_scheduled - interval '30 minutes'
-       and p_now <= p_scheduled + interval '4 hours';
+       and p_now >= p_scheduled - interval '10 minutes'
+       and p_now <= p_scheduled + interval '90 minutes';
 $$;
 
 create or replace function public.kcp_start_trip(p_trip_id uuid)
