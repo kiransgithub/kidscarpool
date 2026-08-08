@@ -16,4 +16,6 @@ KCP should never publish directly from that text. The safe workflow is:
 6. Preview through the existing PostgreSQL occurrence resolver.
 7. Publish only after the normal preview confirmation.
 
+MVP2 acceptance must also include regression fixtures for ambiguous day names, missing AM/PM, conflicting times, skipped weeks, one-way rides, overnight returns and unknown parent names. The parser must ask for clarification rather than silently filling any of those gaps.
+
 This remains an MVP2 item because accurate parsing requires ambiguity handling, locale/time interpretation, safe confirmation, and additional regression fixtures. The current MVP keeps all schedule creation deterministic through structured controls.
