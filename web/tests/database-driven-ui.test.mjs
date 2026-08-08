@@ -26,6 +26,14 @@ test('current driving permission is loaded from the stable participant row', () 
   assert.match(stateSync, /kcpCurrentParticipant = function/)
 })
 
+test('children and private pickup tags are loaded from database records', () => {
+  assert.match(stateSync, /'kcp_children'/)
+  assert.match(stateSync, /state\.children = children/)
+  assert.match(stateSync, /child\?\.pickup_tag/)
+  assert.match(stateSync, /data-db-pickup-tag/)
+  assert.doesNotMatch(stateSync, /Thanishka|Saanvi|Kavish|Ishi/i)
+})
+
 test('role and can-drive fields control admin, volunteer and viewer presentation', () => {
   assert.match(ui, /role === 'owner' \|\| role === 'admin'/)
   assert.match(ui, /role !== 'viewer'/)
