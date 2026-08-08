@@ -1,0 +1,6 @@
+.ipynb_checkpoints/
+.virtual_documents/
+*.ipynb
+supabase/.temp/
+._*
+*.backup_*

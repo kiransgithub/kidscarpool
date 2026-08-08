@@ -1,0 +1,163 @@
+-- ===========================================================================
+-- Regression: recovery-safe single-active-owner invariant
+--
+-- Ports supabase/tests/regression_owner_transfer_invariant.sql (which targeted
+-- kcp_memberships) onto the single-identity model in the baseline, where role
+-- lives on kcp_group_participants.
+--
+-- The invariant MUST be enforced by a DEFERRED constraint trigger and NOT by
+-- an immediate partial unique index. An immediate index rejects the
+-- intermediate two-owner state that an atomic owner transfer passes through --
+-- the bug fixed by migration 202608070001, and reintroduced (and caught here)
+-- while squashing the baseline.
+--
+-- Cases:
+--   A  cascade delete of a group with an active owner        -> commits
+--   B  atomic owner transfer in one transaction              -> commits
+--   C  committing with zero active owners                    -> rejected
+--   D  committing with two active owners                     -> rejected
+--   E  no immediate unique index resurrects the old bug      -> asserted
+--
+-- Prereqs: baseline applied. Usage: psql -v ON_ERROR_STOP=1 -f this_file
+-- ===========================================================================
+
+\set QUIET on
+\pset pager off
+
+do $$
+declare
+    v_user  uuid := gen_random_uuid();
+    v_group uuid;
+    v_owner uuid;
+    v_count integer;
+    v_failed boolean;
+begin
+    -- ---- E: structural guard, checked first -------------------------------
+    if to_regclass('public.kcp_one_active_owner_per_group') is not null then
+        raise exception
+            'E FAILED: immediate owner index exists; it blocks atomic transfer';
+    end if;
+
+    if not exists (
+        select 1 from pg_trigger t
+        where t.tgrelid = 'public.kcp_group_participants'::regclass
+          and t.tgname  = 'kcp_participants_owner_invariant'
+          and not t.tgisinternal
+          and t.tgdeferrable
+          and t.tginitdeferred
+    ) then
+        raise exception 'E FAILED: deferred owner invariant trigger missing';
+    end if;
+    raise notice 'PASS E: deferred trigger present, no immediate index';
+
+    -- ---- fixture ----------------------------------------------------------
+    insert into auth.users(id) values (v_user);
+    insert into public.kcp_profiles(id, display_name) values (v_user, 'Owner');
+    perform auth.become(v_user);
+
+    insert into public.kcp_groups(code, name, created_by)
+        values ('OWNTST', 'Owner invariant test', v_user)
+        returning id into v_group;
+    insert into public.kcp_group_participants(
+            group_id, user_id, display_name, role, status)
+        values (v_group, v_user, 'Owner', 'owner', 'active')
+        returning id into v_owner;
+
+    -- ---- B: atomic owner transfer ----------------------------------------
+    -- Passes through a transient two-owner state; must still commit.
+    insert into public.kcp_group_participants(
+            group_id, display_name, role, status)
+        values (v_group, 'New owner', 'owner', 'active');
+    update public.kcp_group_participants
+       set role = 'admin'
+     where id = v_owner;
+
+    select count(*) into v_count
+      from public.kcp_group_participants
+     where group_id = v_group and role = 'owner' and status = 'active';
+    if v_count <> 1 then
+        raise exception 'B FAILED: expected 1 active owner, found %', v_count;
+    end if;
+    raise notice 'PASS B: atomic owner transfer through transient 2-owner state';
+
+    -- ---- C: zero owners must be rejected ---------------------------------
+    v_failed := false;
+    begin
+        update public.kcp_group_participants
+           set role = 'parent'
+         where group_id = v_group;
+        -- Force the deferred trigger to fire without ending this block.
+        set constraints public.kcp_participants_owner_invariant immediate;
+    exception when others then
+        v_failed := true;
+    end;
+    if not v_failed then
+        raise exception 'C FAILED: zero-owner state was accepted';
+    end if;
+    raise notice 'PASS C: zero-owner state rejected';
+end;
+$$;
+
+-- C left the transaction in a poisoned state inside the DO block, so the
+-- remaining cases run in their own statements against a clean fixture.
+
+do $$
+declare
+    v_user  uuid := gen_random_uuid();
+    v_group uuid;
+    v_failed boolean := false;
+begin
+    insert into auth.users(id) values (v_user);
+    insert into public.kcp_profiles(id, display_name) values (v_user, 'Owner2');
+    perform auth.become(v_user);
+    insert into public.kcp_groups(code, name, created_by)
+        values ('OWNTS2', 'Owner invariant test 2', v_user)
+        returning id into v_group;
+    insert into public.kcp_group_participants(
+            group_id, user_id, display_name, role, status)
+        values (v_group, v_user, 'Owner', 'owner', 'active');
+
+    -- ---- D: two owners at commit must be rejected ------------------------
+    begin
+        insert into public.kcp_group_participants(
+                group_id, display_name, role, status)
+            values (v_group, 'Second owner', 'owner', 'active');
+        set constraints public.kcp_participants_owner_invariant immediate;
+    exception when others then
+        v_failed := true;
+    end;
+    if not v_failed then
+        raise exception 'D FAILED: two-owner state was accepted at commit';
+    end if;
+    raise notice 'PASS D: two-owner state rejected';
+end;
+$$;
+
+-- ---- A: cascade delete of a group holding an active owner ----------------
+do $$
+declare
+    v_user  uuid := gen_random_uuid();
+    v_group uuid;
+begin
+    insert into auth.users(id) values (v_user);
+    insert into public.kcp_profiles(id, display_name) values (v_user, 'Owner3');
+    perform auth.become(v_user);
+    insert into public.kcp_groups(code, name, created_by)
+        values ('OWNTS3', 'Owner invariant test 3', v_user)
+        returning id into v_group;
+    insert into public.kcp_group_participants(
+            group_id, user_id, display_name, role, status)
+        values (v_group, v_user, 'Owner', 'owner', 'active');
+
+    delete from public.kcp_groups where id = v_group;
+
+    if exists (select 1 from public.kcp_groups where id = v_group) then
+        raise exception 'A FAILED: group survived delete';
+    end if;
+    raise notice 'PASS A: cascade delete of group with active owner';
+end;
+$$;
+
+do $$ begin
+    raise notice 'PASS: recovery-safe single-owner invariant holds';
+end $$;
