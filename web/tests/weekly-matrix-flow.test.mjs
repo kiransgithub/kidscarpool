@@ -37,7 +37,7 @@ test('driver confirmation requires an explicit yes before preview generation', a
   assert.match(source, /excluded\.length/)
 })
 
-test('preview renders one complete seven-day week with times and drivers', async () => {
+test('preview renders one complete seven-day week with times and database drivers', async () => {
   const source = await text('web/app.parts/12-weekly-matrix-flow.js')
 
   assert.match(source, /weekly-preview-grid/)
@@ -49,7 +49,7 @@ test('preview renders one complete seven-day week with times and drivers', async
   assert.match(source, /No ride/)
 })
 
-test('parent availability shows all seven days and official scheduled times', async () => {
+test('parent availability shows all seven days and official published times', async () => {
   const [matrixSource, publishedSource] = await Promise.all([
     text('web/app.parts/12-weekly-matrix-flow.js'),
     text('web/app.parts/13-published-availability.js')
@@ -80,9 +80,9 @@ test('weekly matrix styles prevent sticky overlap and preserve dark-mode contras
   assert.match(css, /color:\s*#f8fafc/)
 })
 
-test('service worker advances and caches the weekly matrix stylesheet', async () => {
+test('service worker advances and keeps the weekly matrix stylesheet', async () => {
   const worker = await text('web/service-worker.js')
 
-  assert.match(worker, /kcp-pilot-v8-weekly-matrix-flow/)
+  assert.match(worker, /kcp-pilot-v9-database-driven-ui/)
   assert.match(worker, /\.\/weekly-matrix-flow\.css/)
 })
