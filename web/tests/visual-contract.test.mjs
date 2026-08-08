@@ -27,11 +27,12 @@ test('existing KCP theme and navigation remain intact', async () => {
   assert.match(index, /nextPickupCard/)
 })
 
-test('new usability controls are additive and trip modal has stable layout hooks', async () => {
-  const [index, fixes, enhancement] = await Promise.all([
+test('usability controls remain additive and trip modal keeps stable layout hooks', async () => {
+  const [index, fixes, enhancement, databaseDriven] = await Promise.all([
     text('web/index.html'),
     text('web/fixes.css'),
-    text('web/app.parts/06.js')
+    text('web/app.parts/06.js'),
+    text('web/app.parts/14-database-driven-ui.js')
   ])
 
   for (const id of [
@@ -45,11 +46,12 @@ test('new usability controls are additive and trip modal has stable layout hooks
     assert.match(index, new RegExp(`id="${id}"`))
   }
 
-  assert.match(index, /A school or activity calendar is optional/)
+  assert.match(databaseDriven, /A calendar is optional/)
+  assert.match(databaseDriven, /p_events:\s*\[\]/)
   assert.match(fixes, /\.trip-modal-shell/)
   assert.match(fixes, /\.trip-detail-grid/)
   assert.match(fixes, /\.trip-child-row/)
   assert.match(enhancement, /Accepted coverage/)
   assert.match(enhancement, /10 minutes before the scheduled time/)
-  assert.match(enhancement, /calendar upload is optional/)
+  assert.doesNotMatch(index, /BASIS|KCP-BASIS|Thanishka|Saanvi|Kavish|Ishi|Kiran|Mohan|Pavan|Santhosh/i)
 })
