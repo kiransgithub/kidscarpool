@@ -1,0 +1,83 @@
+.safe-trip-row[data-trip-status="unconfirmed"],
+.safe-trip-row[data-trip-status="confirmation_due"],
+.safe-trip-row[data-trip-status="completion_due"] {
+  border-left: 4px solid #f59e0b;
+}
+
+.safe-state-note {
+  margin: 8px 0 0;
+  color: #8a5b09;
+  font-size: .84rem;
+  line-height: 1.4;
+}
+.safe-state-note.danger { color: #b42318; }
+
+.safe-trip-actions {
+  align-items: flex-start;
+}
+.safe-trip-actions .trip-gate-note {
+  width: 100%;
+  margin: 4px 0 0;
+}
+
+.safe-state-card {
+  margin-top: 14px;
+}
+.safe-state-card > p {
+  color: #52637c;
+  line-height: 1.45;
+}
+
+.trip-event-timeline {
+  display: grid;
+  gap: 0;
+  margin-top: 12px;
+}
+.trip-event-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 16px 1fr;
+  gap: 8px;
+  padding: 0 0 14px;
+}
+.trip-event-row:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 12px;
+  bottom: -2px;
+  width: 2px;
+  background: #dbe3ef;
+}
+.trip-event-dot {
+  z-index: 1;
+  width: 12px;
+  height: 12px;
+  margin-top: 3px;
+  border: 2px solid #155eef;
+  border-radius: 50%;
+  background: white;
+}
+.trip-event-row strong,
+.trip-event-row small {
+  display: block;
+}
+.trip-event-row small {
+  margin-top: 2px;
+  color: #64748b;
+}
+
+.status-pill.danger {
+  background: #fff1f2;
+  color: #9f1239;
+}
+
+@media (prefers-color-scheme: dark) {
+  .safe-state-card > p,
+  .trip-event-row small { color: #bdc9da; }
+  .safe-state-note { color: #fcd34d; }
+  .safe-state-note.danger { color: #fda4af; }
+  .trip-event-row:not(:last-child)::before { background: #29405f; }
+  .trip-event-dot { background: #10213d; }
+  .status-pill.danger { background: #4c1723; color: #ffe4e6; }
+}
