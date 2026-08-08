@@ -1,0 +1,41 @@
+name: Patch baseline start gate once
+
+on:
+  push:
+    branches:
+      - feature/weekly-matrix-and-availability
+    paths:
+      - '.github/workflows/patch-baseline-start-gate-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/weekly-matrix-and-availability
+          fetch-depth: 0
+      - name: Align database start window with the client contract
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('supabase/migrations/00000000000001_kcp_baseline.sql')
+          text = path.read_text()
+          old = "and p_now >= p_scheduled - interval '30 minutes'\n       and p_now <= p_scheduled + interval '4 hours';"
+          new = "and p_now >= p_scheduled - interval '10 minutes'\n       and p_now <= p_scheduled + interval '90 minutes';"
+          if text.count(old) != 1:
+              raise SystemExit(f'Expected one legacy start-window expression, found {text.count(old)}')
+          path.write_text(text.replace(old, new, 1))
+          PY
+      - name: Remove one-time workflow and commit
+        run: |
+          rm .github/workflows/patch-baseline-start-gate-once.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add supabase/migrations/00000000000001_kcp_baseline.sql .github/workflows/patch-baseline-start-gate-once.yml
+          git commit -m 'Align baseline trip start gate with ten-minute rule'
+          git push origin HEAD:feature/weekly-matrix-and-availability
