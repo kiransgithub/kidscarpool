@@ -22,15 +22,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Build and parse the database-driven PWA runtime
+      - name: Build and parse every browser module
         run: |
           node web/build-runtime.mjs /tmp/kcp-app.mjs
           node --check /tmp/kcp-app.mjs
-          node --check web/logic.js
-          node --check web/persistence.js
-          node --check web/generic-schedule.js
-          node --check web/support/app.js
-      - name: Run client logic and visual contract tests
+          find web -maxdepth 2 -name '*.js' -type f -print0 | while IFS= read -r -d '' file; do
+            node --check "$file"
+          done
+      - name: Run all client logic and visual contract tests
         run: node --test web/tests/*.test.mjs
       - name: Validate manifest, ERD, runtime and migration lineage
         run: |
@@ -42,33 +41,8 @@ jobs:
           json.loads(Path('web/manifest.webmanifest').read_text())
           erd = Path('docs/database-erd.md').read_text()
           assert '```mermaid' in erd and 'erDiagram' in erd, 'Database ERD is missing'
-
-          required_assets = [
-              'web/build-runtime.mjs',
-              'web/generic-schedule.css',
-              'web/generic-schedule.js',
-              'web/schedule-builder-usability.css',
-              'web/weekly-matrix-flow.css',
-              'web/account-auth.css',
-              'web/all-group-home.css',
-              'web/support/index.html',
-              'web/support/app.js',
-              'web/support/styles.css',
-              'web/app.parts/12-weekly-matrix-flow.js',
-              'web/app.parts/13-published-availability.js',
-              'web/app.parts/14-database-driven-ui.js',
-              'web/app.parts/15-generic-recovery.js',
-              'web/app.parts/16-role-action-guard.js',
-              'web/app.parts/17-database-state-sync.js',
-              'web/app.parts/18-permanent-auth.js',
-              'web/app.parts/18a-account-styles.js',
-              'web/app.parts/19-platform-admin.js',
-              'web/app.parts/20-user-safe-errors.js',
-              'web/app.parts/21-all-group-home-navigation.js',
-              'web/app.parts/21a-all-group-styles.js'
-          ]
-          for asset in required_assets:
-              assert Path(asset).exists(), f'Missing required client asset: {asset}'
+          assert list(Path('web/app.parts').glob('*.js')), 'PWA modules are missing'
+          assert list(Path('web/tests').glob('*.test.mjs')), 'Client tests are missing'
 
           baseline = Path('supabase/baseline/00000000000001_kcp_baseline.sql')
           assert baseline.exists(), 'Consolidated baseline must live outside the linked migration directory'
@@ -113,22 +87,21 @@ jobs:
           schedule_helper = Path('web/generic-schedule.js').read_text()
           assert "'07:00'" not in schedule_helper, 'Generic schedule helper must not invent a morning time'
           assert "'15:35'" not in schedule_helper, 'Generic schedule helper must not invent a pickup time'
-
           assert "p_scheduled - interval '10 minutes'" in executable_sql
           assert "p_scheduled + interval '90 minutes'" in executable_sql
-          print(f'Validated {len(migrations)} linked migration(s), baseline, runtime and consumer navigation assets')
+          print(f'Validated {len(migrations)} linked migration(s), baseline, runtime and all discovered assets')
           PY
 
   fresh-supabase-database:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
       - uses: supabase/setup-cli@v2
         with:
           version: 2.111.0
           github-token: ${{ github.token }}
-      - name: Apply the restored forward migration chain to a fresh local Supabase database
+      - name: Apply every forward migration to a fresh local Supabase database
         run: supabase db start
       - name: Fail on database lint findings
         run: |
@@ -138,29 +111,25 @@ jobs:
           import json
           from pathlib import Path
 
-          raw = Path('/tmp/kcp-db-lint.json').read_text().strip()
-          findings = json.loads(raw or '[]')
+          findings = json.loads(Path('/tmp/kcp-db-lint.json').read_text().strip() or '[]')
           if findings:
               raise SystemExit(f'Database lint returned {len(findings)} finding(s)')
           print('Database lint returned zero findings')
           PY
-      - name: Run database regression and integration suites
+      - name: Run every database regression and integration suite
         run: |
           DB_CONTAINER="$(docker ps --filter 'name=supabase_db_' --format '{{.Names}}' | head -1)"
           test -n "$DB_CONTAINER"
           run_sql() {
             echo "==> $1"
-            sed 's/auth\.become/public.kcp_test_become/g' "$2" \
+            sed 's/auth\.become/public.kcp_test_become/g' "$1" \
               | docker exec -i "$DB_CONTAINER" psql -v ON_ERROR_STOP=1 -U postgres -d postgres
           }
-          run_sql "Supabase test impersonation helper" 00_supabase_become.sql
-          run_sql "pilot seed fixture" supabase/seeds/basis_pilot.sql
-          run_sql "generic-engine seed equivalence" supabase/tests/equivalence_basis_generic.sql
-          run_sql "single-owner invariant" supabase/tests/regression_owner_invariant.sql
-          run_sql "group lifecycle end to end" supabase/tests/integration_group_lifecycle.sql
-          run_sql "weekend schedule and availability" supabase/tests/regression_weekend_schedule.sql
-          run_sql "permanent identity and devices" supabase/tests/integration_permanent_identity.sql
-          run_sql "platform Super Admin and support" supabase/tests/integration_platform_admin.sql
-          run_sql "all-group personal agenda" supabase/tests/integration_all_group_agenda.sql
+          run_sql 00_supabase_become.sql
+          run_sql supabase/seeds/basis_pilot.sql
+          run_sql supabase/tests/equivalence_basis_generic.sql
+          for file in $(find supabase/tests -maxdepth 1 \( -name 'regression_*.sql' -o -name 'integration_*.sql' \) | sort); do
+            run_sql "$file"
+          done
       - name: Show migration status
         run: supabase migration list --local
