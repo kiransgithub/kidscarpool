@@ -1,0 +1,86 @@
+.group-context-badge {
+  display: inline-flex;
+  max-width: 100%;
+  padding: 4px 9px;
+  margin-bottom: 7px;
+  border-radius: 999px;
+  background: #edf3ff;
+  color: #174ea6;
+  font-size: .72rem;
+  font-weight: 700;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attention-row {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 0;
+  border: 0;
+  border-bottom: 1px solid #e8edf5;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+.attention-row span:first-child { min-width: 0; }
+.attention-row strong, .attention-row small { display: block; }
+.attention-row small { color: #64748b; margin-top: 2px; }
+
+.more-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.more-card {
+  display: grid;
+  gap: 5px;
+  min-height: 124px;
+  padding: 16px;
+  border: 1px solid #dbe3ef;
+  border-radius: 16px;
+  background: white;
+  color: #10203a;
+  text-align: left;
+}
+.more-card > span { font-size: 1.45rem; color: #155eef; }
+.more-card strong { font-size: 1rem; }
+.more-card small { color: #64748b; line-height: 1.35; }
+
+.agenda-filter-label {
+  display: grid;
+  gap: 4px;
+  min-width: 150px;
+  color: #64748b;
+  font-size: .72rem;
+}
+.agenda-filter-label select { min-height: 40px; }
+
+.all-group-trip-row h3 { margin-top: 0; }
+.request-card {
+  padding: 16px;
+  border: 1px solid #dbe3ef;
+  border-radius: 16px;
+  background: white;
+}
+.request-card.needs-action { border-color: #f59e0b; box-shadow: 0 0 0 2px rgb(245 158 11 / .12); }
+
+.bottom-nav[data-five-tab="true"] {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+@media (prefers-color-scheme: dark) {
+  .group-context-badge { background: #17366b; color: #dbeafe; }
+  .more-card, .request-card { background: #10213d; border-color: #29405f; color: #f8fafc; }
+  .more-card small, .attention-row small, .agenda-filter-label { color: #bdc9da; }
+  .attention-row { border-color: #29405f; }
+}
+
+@media (max-width: 380px) {
+  .more-grid { grid-template-columns: 1fr; }
+  .bottom-nav[data-five-tab="true"] .nav-item small { font-size: .63rem; }
+}
