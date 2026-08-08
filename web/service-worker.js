@@ -1,4 +1,4 @@
-const CACHE = 'kcp-pilot-v7-schedule-builder-usability'
+const CACHE = 'kcp-pilot-v8-weekly-matrix-flow'
 const SHELL = [
   './',
   './index.html',
@@ -6,6 +6,7 @@ const SHELL = [
   './fixes.css',
   './generic-schedule.css',
   './schedule-builder-usability.css',
+  './weekly-matrix-flow.css',
   './app.js',
   './logic.js',
   './persistence.js',
