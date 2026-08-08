@@ -5,6 +5,7 @@ import fs from 'node:fs'
 const ui = fs.readFileSync('web/app.parts/14-database-driven-ui.js', 'utf8')
 const recovery = fs.readFileSync('web/app.parts/15-generic-recovery.js', 'utf8')
 const roleGuard = fs.readFileSync('web/app.parts/16-role-action-guard.js', 'utf8')
+const stateSync = fs.readFileSync('web/app.parts/17-database-state-sync.js', 'utf8')
 const index = fs.readFileSync('web/index.html', 'utf8')
 const builder = fs.readFileSync('web/build-runtime.mjs', 'utf8')
 const serviceWorker = fs.readFileSync('web/service-worker.js', 'utf8')
@@ -16,6 +17,13 @@ test('group, destination, term, member, child and trip labels are read from stat
   assert.match(ui, /trip\?\.display_label/)
   assert.match(ui, /group\?\.destination_name \|\| group\?\.school_name/)
   assert.match(ui, /group\?\.term_label \|\| group\?\.academic_year/)
+})
+
+test('current driving permission is loaded from the stable participant row', () => {
+  assert.match(stateSync, /kcp_group_participants/)
+  assert.match(stateSync, /\.eq\('user_id', userId\)/)
+  assert.match(stateSync, /state\.currentParticipant = participants\[0\]/)
+  assert.match(stateSync, /kcpCurrentParticipant = function/)
 })
 
 test('role and can-drive fields control admin, volunteer and viewer presentation', () => {
@@ -36,9 +44,16 @@ test('stale cached controls cannot bypass role-aware presentation', () => {
   assert.match(roleGuard, /data-action="open-generic-schedule-builder"|open-generic-schedule-builder/)
 })
 
-test('new schedule drafts do not invent a weekday or clock time', () => {
+test('new schedule drafts and advanced rides do not invent a weekday time', () => {
   assert.match(ui, /scheduleDraftSessions = \[\]/)
   assert.match(ui, /defaultWeeklyTime = function \(\) \{\s*return ''/s)
+  assert.match(stateSync, /outboundTime: previous\?\.outboundTime \?\? ''/)
+  assert.match(stateSync, /returnTime: previous\?\.returnTime \?\? ''/)
+})
+
+test('new groups default to the device timezone instead of the active group timezone', () => {
+  assert.match(stateSync, /Intl\.DateTimeFormat\(\)\.resolvedOptions\(\)\.timeZone/)
+  assert.match(stateSync, /select\.value = timezone/)
 })
 
 test('calendar uploads store generic metadata and no embedded event list', () => {
