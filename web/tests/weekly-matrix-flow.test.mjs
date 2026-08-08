@@ -50,15 +50,21 @@ test('preview renders one complete seven-day week with times and drivers', async
 })
 
 test('parent availability shows all seven days and official scheduled times', async () => {
-  const source = await text('web/app.parts/12-weekly-matrix-flow.js')
+  const [matrixSource, publishedSource] = await Promise.all([
+    text('web/app.parts/12-weekly-matrix-flow.js'),
+    text('web/app.parts/13-published-availability.js')
+  ])
 
-  assert.match(source, /My ride availability/)
-  assert.match(source, /times below come from the published recurring schedule/i)
-  assert.match(source, /WEEKDAYS\.map\(day => availabilityWeekRow/)
-  assert.match(source, /uniqueScheduleTimes/)
-  assert.match(source, /data-action="toggle-weekday"/)
-  assert.match(source, /data-action="submit-constraints"/)
-  assert.match(source, /Times are informational here/)
+  assert.match(matrixSource, /My ride availability/)
+  assert.match(matrixSource, /WEEKDAYS\.map\(day => availabilityWeekRow/)
+  assert.match(publishedSource, /currently published trips/i)
+  assert.match(publishedSource, /publishedWeeklyTripTimes/)
+  assert.match(publishedSource, /for \(const trip of state\.trips/)
+  assert.match(publishedSource, /state\.scheduleBuilder\?\.sessions.*first publication/s)
+  assert.match(publishedSource, /WEEKDAYS\.map\(day => publishedAvailabilityRow/)
+  assert.match(publishedSource, /data-action="toggle-weekday"/)
+  assert.match(publishedSource, /data-action="submit-constraints"/)
+  assert.match(publishedSource, /Times are read-only here/)
 })
 
 test('weekly matrix styles prevent sticky overlap and preserve dark-mode contrast', async () => {
