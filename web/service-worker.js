@@ -1,4 +1,4 @@
-const CACHE = 'kcp-pilot-v10-permanent-account'
+const CACHE = 'kcp-pilot-v12-user-safe-status'
 const SHELL = [
   './',
   './index.html',
