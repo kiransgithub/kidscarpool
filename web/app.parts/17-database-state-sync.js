@@ -2,6 +2,7 @@
 // schedule creation.
 
 state.currentParticipant = null
+state.children = []
 
 const kcpDatabaseStatePreviousLoadWorkspace = loadWorkspace
 loadWorkspace = async function () {
@@ -11,18 +12,27 @@ loadWorkspace = async function () {
   const userId = state.session?.user?.id
   if (!groupId || !userId) {
     state.currentParticipant = null
+    state.children = []
     return
   }
 
   try {
-    const participants = await selectRows(
-      'kcp_group_participants',
-      query => query.eq('group_id', groupId).eq('user_id', userId).eq('status', 'active').limit(1)
-    )
+    const [participants, children] = await Promise.all([
+      selectRows(
+        'kcp_group_participants',
+        query => query.eq('group_id', groupId).eq('user_id', userId).eq('status', 'active').limit(1)
+      ),
+      selectRows(
+        'kcp_children',
+        query => query.eq('group_id', groupId).eq('status', 'active').order('name')
+      )
+    ])
     state.currentParticipant = participants[0] || null
+    state.children = children
   } catch (error) {
-    console.warn('KCP participant permission lookup:', error.message || error)
+    console.warn('KCP participant/child lookup:', error.message || error)
     state.currentParticipant = null
+    state.children = []
   }
 }
 
@@ -30,11 +40,29 @@ const kcpDatabaseStatePreviousClearWorkspace = clearWorkspace
 clearWorkspace = function () {
   kcpDatabaseStatePreviousClearWorkspace()
   state.currentParticipant = null
+  state.children = []
 }
 
 const kcpDatabaseStatePreviousCurrentParticipant = kcpCurrentParticipant
 kcpCurrentParticipant = function () {
   return state.currentParticipant || kcpDatabaseStatePreviousCurrentParticipant()
+}
+
+// Add private pickup tags from the child records returned under group RLS. No
+// child name or tag is embedded in the client.
+const kcpDatabaseStatePreviousShowTrip = showTrip
+showTrip = function (tripId) {
+  kcpDatabaseStatePreviousShowTrip(tripId)
+  const content = el('tripDialogContent')
+  content?.querySelectorAll('.trip-child-row').forEach(row => {
+    const name = row.querySelector('strong')?.textContent?.trim()
+    const child = state.children.find(item => item.name === name)
+    if (!child?.pickup_tag || row.querySelector('[data-db-pickup-tag]')) return
+    row.insertAdjacentHTML(
+      'beforeend',
+      `<span class="badge" data-db-pickup-tag>Tag ${escapeHTML(child.pickup_tag)}</span>`
+    )
+  })
 }
 
 // The create-group dialog always defaults to the current device timezone. It
