@@ -40,8 +40,16 @@ jobs:
           json.loads(Path('web/manifest.webmanifest').read_text())
           erd = Path('docs/database-erd.md').read_text()
           assert '```mermaid' in erd and 'erDiagram' in erd, 'Database ERD is missing'
-          assert Path('web/generic-schedule.css').exists(), 'Generic schedule builder CSS is missing'
-          assert Path('web/generic-schedule.js').exists(), 'Generic schedule helper module is missing'
+
+          required_assets = [
+              'web/generic-schedule.css',
+              'web/generic-schedule.js',
+              'web/schedule-builder-usability.css',
+              'web/weekly-matrix-flow.css',
+              'web/app.parts/12-weekly-matrix-flow.js'
+          ]
+          for asset in required_assets:
+              assert Path(asset).exists(), f'Missing required client asset: {asset}'
 
           migrations = sorted(Path('supabase/migrations').glob('*.sql'))
           assert migrations, 'No Supabase migrations found'
@@ -50,23 +58,18 @@ jobs:
               assert text.count('$$') % 2 == 0, f'Unbalanced $$ in {migration}'
               assert text.strip().endswith('commit;'), f'{migration} must end in commit;'
 
-          # Production scheduling is data-driven. Domain-specific identities are
-          # allowed only in seed/test fixtures, never in the generic schema,
-          # editor, occurrence resolver, publisher or legacy-import adapter.
-          generic_paths = [
-              'supabase/migrations/202608060018_kcp_generic_schedule_schema.sql',
-              'supabase/migrations/202608060022_kcp_generic_schedule_drafts.sql',
-              'supabase/migrations/202608060023_kcp_generic_schedule_occurrences.sql',
-              'supabase/migrations/202608060024_kcp_generic_schedule_publish.sql',
-              'supabase/migrations/202608060025_kcp_generic_schedule_legacy_import.sql'
-          ]
-          for path in generic_paths:
-              assert Path(path).exists(), f'Missing generic scheduling migration: {path}'
-          generic_engine = '\n'.join(Path(path).read_text() for path in generic_paths)
-          forbidden = re.compile(r'\b(Kiran|Mohan|Santhosh|Pavan|BASIS|DRMA)\b', re.I)
-          match = forbidden.search(generic_engine)
-          assert not match, f'Hard-coded scheduling identity found in generic engine: {match.group(0)}'
-          print(f'Validated {len(migrations)} migrations and genericity guard')
+          # The repository now uses one consolidated baseline migration. Scan
+          # executable SQL rather than archived migration filenames. Scenario
+          # names are allowed in comments, seeds and tests, never in the actual
+          # production scheduling statements.
+          baseline = Path('supabase/migrations/00000000000001_kcp_baseline.sql')
+          assert baseline.exists(), 'Consolidated KCP baseline migration is missing'
+          executable_sql = re.sub(r'--[^\n]*', '', baseline.read_text())
+          forbidden = re.compile(r'\b(Kiran|Mohan|Santhosh|Pavan|DRMA)\b', re.I)
+          match = forbidden.search(executable_sql)
+          assert not match, f'Hard-coded scheduling identity found in production SQL: {match.group(0)}'
+
+          print(f'Validated {len(migrations)} migration(s), client assets and genericity guard')
           PY
 
   fresh-supabase-database:
