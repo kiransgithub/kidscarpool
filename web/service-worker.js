@@ -1,10 +1,11 @@
-const CACHE = 'kcp-pilot-v6-recovery-dialog-feedback'
+const CACHE = 'kcp-pilot-v7-schedule-builder-usability'
 const SHELL = [
   './',
   './index.html',
   './styles.css',
   './fixes.css',
   './generic-schedule.css',
+  './schedule-builder-usability.css',
   './app.js',
   './logic.js',
   './persistence.js',
