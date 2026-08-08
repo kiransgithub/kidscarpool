@@ -1,4 +1,4 @@
-const CACHE = 'kcp-pilot-v8-weekly-matrix-flow'
+const CACHE = 'kcp-pilot-v9-database-driven-ui'
 const SHELL = [
   './',
   './index.html',

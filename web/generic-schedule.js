@@ -42,6 +42,9 @@ export const ASSIGNMENT_STRATEGIES = [
 ]
 
 export function createSessionDraft(overrides = {}) {
+  const outboundTime = firstDefined(overrides, ['outboundTime', 'outbound_time'], '')
+  const returnTime = firstDefined(overrides, ['returnTime', 'return_time'], '')
+
   return {
     clientId: overrides.clientId || cryptoSafeId(),
     name: overrides.name || 'Ride day',
@@ -49,9 +52,9 @@ export function createSessionDraft(overrides = {}) {
     intervalWeeks: Number(overrides.intervalWeeks || overrides.recurrence_interval_weeks || 1),
     anchorDate: overrides.anchorDate || overrides.recurrence_anchor_date || '',
     outboundEnabled: overrides.outboundEnabled ?? overrides.outbound_enabled ?? true,
-    outboundTime: normalizeTime(overrides.outboundTime || overrides.outbound_time || '07:00'),
+    outboundTime: normalizeTime(outboundTime),
     returnEnabled: overrides.returnEnabled ?? overrides.return_enabled ?? true,
-    returnTime: normalizeTime(overrides.returnTime || overrides.return_time || '15:35'),
+    returnTime: normalizeTime(returnTime),
     returnDayOffset: Number(overrides.returnDayOffset ?? overrides.return_day_offset ?? 0),
     destinationOverride: overrides.destinationOverride || overrides.destination_override || '',
     displayOrder: Number(overrides.displayOrder || overrides.display_order || 0)
@@ -167,7 +170,7 @@ export function previewSchedule({
       .sort((a, b) => a.displayOrder - b.displayOrder || a.outboundTime.localeCompare(b.outboundTime))
 
     for (const session of daySessions) {
-      if (session.outboundEnabled) {
+      if (session.outboundEnabled && isTime(session.outboundTime)) {
         occurrences.push(makePreviewOccurrence({
           date: cursor,
           session,
@@ -176,7 +179,7 @@ export function previewSchedule({
           label: outboundLabel
         }))
       }
-      if (session.returnEnabled) {
+      if (session.returnEnabled && isTime(session.returnTime)) {
         occurrences.push(makePreviewOccurrence({
           date: plusDays(cursor, session.returnDayOffset),
           serviceDate: cursor,
@@ -260,6 +263,13 @@ function makePreviewOccurrence({ date, serviceDate = date, session, legType, tim
     time,
     label
   }
+}
+
+function firstDefined(source, keys, fallback) {
+  for (const key of keys) {
+    if (Object.prototype.hasOwnProperty.call(source, key)) return source[key] ?? fallback
+  }
+  return fallback
 }
 
 function cryptoSafeId() {

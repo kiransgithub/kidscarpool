@@ -7,12 +7,12 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KCP">
-  <meta name="description" content="Private carpool scheduling pilot for schools, clubs and activities">
+  <meta name="description" content="Private carpool scheduling for schools, clubs and activities">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="apple-touch-icon" href="./icon-1024.png">
   <link rel="stylesheet" href="./styles.css">
   <link rel="stylesheet" href="./fixes.css">
-  <title>Kidscarpool — KCP Pilot</title>
+  <title>Kidscarpool</title>
 </head>
 <body>
   <div id="app" class="app-shell">
@@ -41,14 +41,14 @@
       <section id="loadingView" class="center-state">
         <div class="spinner"></div>
         <h1>Starting KCP…</h1>
-        <p>Connecting securely to the pilot database.</p>
+        <p>Connecting securely to the group database.</p>
       </section>
 
       <section id="onboardingView" class="view hidden">
         <div class="hero-card">
           <img src="./icon-1024.png" alt="KCP logo" class="hero-logo">
           <h1>Welcome to Kidscarpool</h1>
-          <p>The installed app remembers your Supabase session and private group access on this device. No SMS charge is required.</p>
+          <p>The installed app remembers your private group access on this device.</p>
         </div>
 
         <div class="segmented" role="tablist">
@@ -57,32 +57,32 @@
         </div>
 
         <form id="profileForm" class="card form-card">
-          <h2>Parent profile</h2>
-          <label>Parent name<input id="profileName" required maxlength="80" autocomplete="name" placeholder="Kiran"></label>
-          <label>Phone number <span class="optional">not SMS-verified in pilot</span><input id="profilePhone" inputmode="tel" autocomplete="tel" placeholder="6025550100"></label>
+          <h2>Profile</h2>
+          <label>Name<input id="profileName" required maxlength="80" autocomplete="name" placeholder="Your name"></label>
+          <label>Phone number <span class="optional">optional for this pilot</span><input id="profilePhone" inputmode="tel" autocomplete="tel" placeholder="Phone number"></label>
           <button class="primary-button" type="submit">Continue</button>
         </form>
 
         <form id="joinForm" class="card form-card hidden">
           <h2>Join or restore a private group</h2>
-          <p class="meta">Use the original invitation again when moving to a new browser/device identity. KCP transfers that group membership instead of creating a duplicate parent.</p>
-          <label>Invited parent name<input id="joinName" required maxlength="80" autocomplete="name" placeholder="Mohan"></label>
-          <label>Phone number<input id="joinPhone" inputmode="tel" autocomplete="tel" placeholder="Use the number on the invitation"></label>
-          <label>8-character invitation code<input id="joinToken" required maxlength="12" autocapitalize="characters" autocomplete="one-time-code" placeholder="AB12CD34"></label>
+          <p class="meta">Use the invitation supplied by a group Owner or Admin. Reusing the original invitation can restore that group on a new browser or device.</p>
+          <label>Invited member name<input id="joinName" required maxlength="80" autocomplete="name" placeholder="Invited name"></label>
+          <label>Phone number <span class="optional">when included on the invitation</span><input id="joinPhone" inputmode="tel" autocomplete="tel" placeholder="Phone number"></label>
+          <label>Invitation code<input id="joinToken" required maxlength="12" autocapitalize="characters" autocomplete="one-time-code" placeholder="Invitation code"></label>
           <button class="primary-button" type="submit">Join or restore access</button>
         </form>
 
-        <div class="privacy-note">Normal app restarts should not ask again. Clearing all Safari/PWA website data removes the local session; use the original invitation or an owner recovery code to restore access.</div>
+        <div class="privacy-note">Clearing all browser or installed-app website data removes local credentials. Keep the original invitation or request a recovery code from the group Owner.</div>
       </section>
 
       <section id="homeView" class="view hidden" data-view="home">
         <div class="welcome-row">
-          <div><span class="eyebrow">WELCOME</span><h1 id="welcomeName">Parent</h1></div>
-          <button class="refresh-button" data-action="refresh" type="button">↻</button>
+          <div><span class="eyebrow">WELCOME</span><h1 id="welcomeName">Member</h1></div>
+          <button class="refresh-button" data-action="refresh" type="button" aria-label="Refresh">↻</button>
         </div>
         <div id="noGroupHome" class="empty-card hidden">
           <h2>Create or join a carpool group</h2>
-          <p>Your next drop and pickup will appear here after an admin publishes the schedule.</p>
+          <p>Published rides appear here after an Owner or Admin configures the schedule.</p>
           <button class="primary-button" data-nav="groups" type="button">Open Groups</button>
         </div>
         <div id="nextTripsGrid" class="next-trips-grid">
@@ -147,44 +147,35 @@
     </nav>
   </div>
 
+  <!-- Legacy create-group form retained for compatibility with older cached
+       clients. The current UI opens the database-driven generic group dialog. -->
   <dialog id="createGroupDialog" class="modal">
     <form id="createGroupForm" method="dialog" class="dialog-form">
       <div class="dialog-title"><h2>Create carpool group</h2><button class="close-button" value="cancel" formmethod="dialog" aria-label="Close">×</button></div>
-      <p class="optional-calendar-note">A school or activity calendar is optional. Define the recurring date range and weekdays now; an admin can upload exception dates later.</p>
       <div class="group-config-grid">
-        <label class="full-width">Group name<input id="newGroupName" required placeholder="BASIS Primary Carpool"></label>
-        <label>Group type
-          <select id="newGroupType" required>
-            <option value="school">School</option>
-            <option value="club">Club</option>
-            <option value="training">Training</option>
-            <option value="music">Music</option>
-            <option value="gymnastics">Gymnastics</option>
-            <option value="tennis">Tennis</option>
-            <option value="other">Other</option>
-          </select>
-        </label>
-        <label>Destination / activity<input id="newSchoolName" required value="BASIS Phoenix Primary" placeholder="School, club or venue"></label>
-        <label>Term / season <span class="optional">optional</span><input id="newAcademicYear" value="2026-27" placeholder="2026-27 or Fall season"></label>
+        <label class="full-width">Group name<input id="newGroupName" required placeholder="Group name"></label>
+        <label>Group type<select id="newGroupType"><option value="other">Other</option></select></label>
+        <label>Destination or activity<input id="newSchoolName" required placeholder="Destination or activity"></label>
+        <label>Term or season<input id="newAcademicYear" placeholder="Optional term"></label>
         <label>Schedule starts<input id="newScheduleStart" required type="date"></label>
         <label>Schedule ends<input id="newScheduleEnd" required type="date"></label>
-        <label>Drop-off / outbound time<input id="newDropTime" required type="time" value="07:00"></label>
-        <label>Pickup / return time<input id="newPickupTime" required type="time" value="15:35"></label>
-        <label class="full-width">Auto-complete after minutes
-          <input id="newAutoCompleteMinutes" required type="number" min="5" max="480" value="60">
-        </label>
+        <label>Outbound time<input id="newDropTime" required type="time"></label>
+        <label>Return time<input id="newPickupTime" required type="time"></label>
+        <label class="full-width">Auto-complete after minutes<input id="newAutoCompleteMinutes" required type="number" min="5" max="480" value="60"></label>
         <fieldset class="full-width" style="border:0;padding:0;margin:0">
-          <legend style="font-size:13px;font-weight:800;color:#344054;margin-bottom:7px">Recurring weekdays</legend>
+          <legend>Recurring weekdays</legend>
           <div class="checkbox-grid">
-            <label class="checkbox-chip"><input name="newServiceWeekday" type="checkbox" value="1" checked>Mon</label>
-            <label class="checkbox-chip"><input name="newServiceWeekday" type="checkbox" value="2" checked>Tue</label>
-            <label class="checkbox-chip"><input name="newServiceWeekday" type="checkbox" value="3" checked>Wed</label>
-            <label class="checkbox-chip"><input name="newServiceWeekday" type="checkbox" value="4" checked>Thu</label>
-            <label class="checkbox-chip"><input name="newServiceWeekday" type="checkbox" value="5" checked>Fri</label>
+            <label class="checkbox-chip"><input name="newServiceWeekday" type="checkbox" value="1">Mon</label>
+            <label class="checkbox-chip"><input name="newServiceWeekday" type="checkbox" value="2">Tue</label>
+            <label class="checkbox-chip"><input name="newServiceWeekday" type="checkbox" value="3">Wed</label>
+            <label class="checkbox-chip"><input name="newServiceWeekday" type="checkbox" value="4">Thu</label>
+            <label class="checkbox-chip"><input name="newServiceWeekday" type="checkbox" value="5">Fri</label>
+            <label class="checkbox-chip"><input name="newServiceWeekday" type="checkbox" value="6">Sat</label>
+            <label class="checkbox-chip"><input name="newServiceWeekday" type="checkbox" value="7">Sun</label>
           </div>
         </fieldset>
-        <label>Your child<input id="newChildName" required placeholder="Thanishka"></label>
-        <label>Grade / level<input id="newChildGrade" required type="number" min="0" max="12" value="4"></label>
+        <label>Child or rider<input id="newChildName" required placeholder="Child or rider name"></label>
+        <label>Grade or level<input id="newChildGrade" type="number" min="0" max="12"></label>
       </div>
       <button class="primary-button" type="submit">Create private group</button>
     </form>
@@ -192,11 +183,11 @@
 
   <dialog id="inviteDialog" class="modal">
     <form id="inviteForm" method="dialog" class="dialog-form">
-      <div class="dialog-title"><h2>Invite another parent</h2><button class="close-button" value="cancel" formmethod="dialog" aria-label="Close">×</button></div>
-      <label>Parent name<input id="inviteName" required placeholder="Mohan"></label>
-      <label>Phone <span class="optional">optional</span><input id="invitePhone" inputmode="tel" placeholder="6025550101"></label>
-      <label>Child name<input id="inviteChild" required placeholder="Saanvi"></label>
-      <label>Grade<input id="inviteGrade" required type="number" min="0" max="12" value="5"></label>
+      <div class="dialog-title"><h2>Invite a member</h2><button class="close-button" value="cancel" formmethod="dialog" aria-label="Close">×</button></div>
+      <label>Member name<input id="inviteName" required placeholder="Member name"></label>
+      <label>Phone <span class="optional">optional</span><input id="invitePhone" inputmode="tel" placeholder="Phone number"></label>
+      <label>Child or rider<input id="inviteChild" required placeholder="Child or rider name"></label>
+      <label>Grade or level<input id="inviteGrade" type="number" min="0" max="12"></label>
       <label>Role<select id="inviteRole"><option value="parent">Parent</option><option value="admin">Admin</option><option value="viewer">Viewer</option></select></label>
       <button class="primary-button" type="submit">Create invitation</button>
     </form>
@@ -205,10 +196,10 @@
   <dialog id="recoverGroupDialog" class="modal">
     <form id="recoverGroupForm" method="dialog" class="dialog-form">
       <div class="dialog-title"><h2>Recover group access</h2><button class="close-button" value="cancel" formmethod="dialog" aria-label="Close">×</button></div>
-      <p class="optional-calendar-note">Use the one-time code issued from the Supabase SQL Editor. Recovery moves the roster entry and active trips from the earlier anonymous identity to this installed app; it does not create a second active parent.</p>
-      <label>Group code<input id="recoverGroupCode" required value="KCP-BASIS-2026-27" autocapitalize="characters"></label>
-      <label>Parent name<input id="recoverParentName" required value="Kiran" autocomplete="name"></label>
-      <label>One-time recovery code<input id="recoverCode" required maxlength="32" autocapitalize="characters" autocomplete="one-time-code" placeholder="REC-XXXXXXXX-XXXXXXXX"></label>
+      <p class="optional-calendar-note">Enter the group, member name, and one-time code supplied by the group administrator.</p>
+      <label>Group code<input id="recoverGroupCode" required autocapitalize="characters" placeholder="Group code"></label>
+      <label>Member name<input id="recoverParentName" required autocomplete="name" placeholder="Member name"></label>
+      <label>One-time recovery code<input id="recoverCode" required maxlength="40" autocapitalize="characters" autocomplete="one-time-code" placeholder="Recovery code"></label>
       <button class="primary-button" type="submit">Recover and remember this device</button>
     </form>
   </dialog>
