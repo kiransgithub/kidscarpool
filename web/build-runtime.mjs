@@ -39,7 +39,8 @@ const replacements = new Map([
   ['Santosh', 'Member'],
   ['Pavan', 'Member'],
   ['Mohan', 'Member'],
-  ['Kiran', 'Member']
+  ['Kiran', 'Member'],
+  ['BASIS', 'Destination']
 ])
 for (const [from, to] of replacements) source = source.split(from).join(to)
 
