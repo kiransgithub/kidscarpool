@@ -1,13 +1,9 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { readFile } from 'node:fs/promises'
+import { readFile, access } from 'node:fs/promises'
+import { constants } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
-import {
-  normalizeRecoveryCode,
-  recoveryErrorMessage,
-  resolveRecoveryAttempt
-} from '../logic.js'
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 
@@ -15,78 +11,64 @@ async function text(relative) {
   return readFile(path.join(repoRoot, relative), 'utf8')
 }
 
-test('seeded pilot distinguishes available, current and another-device claim states', async () => {
-  const source = await text('web/app.parts/05.js')
+async function exists(relative) {
+  try {
+    await access(path.join(repoRoot, relative), constants.F_OK)
+    return true
+  } catch {
+    return false
+  }
+}
 
-  assert.match(source, /claim_state/)
-  assert.match(source, /available:/)
-  assert.match(source, /current_user:/)
-  assert.match(source, /another_device:/)
-  assert.match(source, /Recover group access/)
-  assert.match(source, /data-seeded-claim-state/)
+test('production no longer contains a preloaded-person claim-state UI', async () => {
+  assert.equal(await exists('web/app.parts/05.js'), false)
+  assert.equal(await exists('web/app.parts/09.js'), false)
+
+  const source = await text('web/app.parts/15-generic-recovery.js')
+  assert.doesNotMatch(source, /seededPilotStatus|claim_state|open-basis-recovery/i)
+  assert.match(source, /user-entered group and member identity/i)
 })
 
-test('recovery UI and invitation restoration language remain present', async () => {
-  const [index, bootstrap] = await Promise.all([
+test('generic recovery UI and invitation restoration language remain present', async () => {
+  const [index, bootstrap, recovery] = await Promise.all([
     text('web/index.html'),
-    text('web/app.parts/00.js')
+    text('web/app.parts/00.js'),
+    text('web/app.parts/15-generic-recovery.js')
   ])
 
   assert.match(index, /id="recoverGroupDialog"/)
   assert.match(index, /id="recoverGroupForm"/)
   assert.match(index, /Join \/ restore with invite/)
+  assert.match(index, /placeholder="Group code"/)
+  assert.match(index, /placeholder="Member name"/)
   assert.match(bootstrap, /storage:\s*kcpAuthStorage/)
   assert.match(bootstrap, /restoreRememberedMemberships/)
   assert.match(bootstrap, /rememberGroup\(data\[0\]\.group_id\)/)
+  assert.match(recovery, /kcp_recover_seeded_roster/)
 })
 
-test('recovery modal close button cannot submit the recovery form', async () => {
-  const source = await text('web/app.parts/09.js')
+test('generic recovery modal close controls cannot submit the form', async () => {
+  const source = await text('web/app.parts/15-generic-recovery.js')
 
-  assert.match(source, /kcpRecoveryCloseButton\.type = 'button'/)
+  assert.match(source, /kcpGenericRecoveryClose\.type = 'button'/)
   assert.match(source, /removeAttribute\('formmethod'\)/)
-  assert.match(source, /data-action="close-recovery-dialog"|dataset\.action = 'close-recovery-dialog'/)
-  assert.match(source, /closeRecoveryDialog/)
-  assert.match(source, /kcpRecoveryDialog\.close\('cancel'\)/)
+  assert.match(source, /kcpGenericRecoveryDialog\.close\('cancel'\)/)
   assert.match(source, /addEventListener\('cancel'/)
+  assert.match(source, /event\.target === kcpGenericRecoveryDialog/)
 })
 
-test('recovery modal exposes progress and errors inside the visible dialog', async () => {
-  const [source, fixes] = await Promise.all([
-    text('web/app.parts/09.js'),
-    text('web/fixes.css')
-  ])
+test('recovery uses values entered by the user and refreshes cloud data after success', async () => {
+  const source = await text('web/app.parts/15-generic-recovery.js')
 
-  assert.match(source, /recoverGroupStatus/)
-  assert.match(source, /aria-live/)
-  assert.match(source, /setRecoveryStatus\('Checking the roster and one-time recovery code/)
-  assert.match(source, /recoveryErrorMessage\(error\)/)
-  assert.match(source, /setRecoveryBusy\(false\)/)
-  assert.match(fixes, /\.recovery-dialog-status\.error/)
-  assert.match(fixes, /\.recovery-dialog-status\.success/)
-})
-
-test('recovery is idempotent when the database committed before the client refreshed', () => {
-  const result = resolveRecoveryAttempt({
-    rpcError: new Error('Recovery code is invalid, expired, or already used'),
-    status: {
-      group_id: 'group-1',
-      group_code: 'KCP-BASIS-2026-27',
-      claim_state: 'current_user'
-    }
-  })
-
-  assert.equal(result.ok, true)
-  assert.equal(result.alreadyRecovered, true)
-  assert.equal(result.groupId, 'group-1')
-})
-
-test('recovery code normalization and user-facing error text remain stable', () => {
-  assert.equal(normalizeRecoveryCode('  rec-ab12-cd34  '), 'REC-AB12-CD34')
-  assert.match(
-    recoveryErrorMessage(new Error('Recovery code is invalid, expired, or already used')),
-    /Issue a new one-time code/
-  )
+  assert.match(source, /recoverGroupCode'\)\.value\.trim\(\)\.toUpperCase\(\)/)
+  assert.match(source, /recoverParentName'\)\.value\.trim\(\)/)
+  assert.match(source, /recoverCode'\)\.value\.trim\(\)\.toUpperCase\(\)/)
+  assert.match(source, /p_group_code:\s*groupCode/)
+  assert.match(source, /p_parent_name:\s*memberName/)
+  assert.match(source, /p_recovery_code:\s*recoveryCode/)
+  assert.match(source, /await rememberGroup\(recovered\.group_id/)
+  assert.match(source, /await refreshAll\(\)/)
+  assert.doesNotMatch(source, /KCP-BASIS|\bKiran\b|BASIS Phoenix/i)
 })
 
 test('open cover requests expose withdrawal without changing the existing trip layout', async () => {
@@ -102,12 +84,12 @@ test('open cover requests expose withdrawal without changing the existing trip l
   assert.match(fixes, /\.trip-detail-grid/)
 })
 
-test('service worker preserves durable access and advances with new app modules', async () => {
+test('service worker preserves durable access and advances with database-driven modules', async () => {
   const worker = await text('web/service-worker.js')
   const version = worker.match(/kcp-pilot-v(\d+)-/)?.[1]
 
   assert.ok(version, 'Service-worker cache must contain a numeric application version')
-  assert.ok(Number(version) >= 6, `Expected cache version 6 or newer, found ${version}`)
+  assert.ok(Number(version) >= 9, `Expected cache version 9 or newer, found ${version}`)
   assert.match(worker, /\.\/persistence\.js/)
   assert.match(worker, /\.\/generic-schedule\.js/)
   assert.match(worker, /\.\/generic-schedule\.css/)
