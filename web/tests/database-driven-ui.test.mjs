@@ -4,6 +4,7 @@ import fs from 'node:fs'
 
 const ui = fs.readFileSync('web/app.parts/14-database-driven-ui.js', 'utf8')
 const recovery = fs.readFileSync('web/app.parts/15-generic-recovery.js', 'utf8')
+const roleGuard = fs.readFileSync('web/app.parts/16-role-action-guard.js', 'utf8')
 const index = fs.readFileSync('web/index.html', 'utf8')
 const builder = fs.readFileSync('web/build-runtime.mjs', 'utf8')
 const serviceWorker = fs.readFileSync('web/service-worker.js', 'utf8')
@@ -23,6 +24,16 @@ test('role and can-drive fields control admin, volunteer and viewer presentation
   assert.match(ui, /data-nav="volunteers"/)
   assert.match(ui, /open-generic-schedule/)
   assert.match(ui, /This membership is read-only/)
+})
+
+test('stale cached controls cannot bypass role-aware presentation', () => {
+  assert.match(roleGuard, /KCP_DRIVING_ACTIONS/)
+  assert.match(roleGuard, /KCP_ADMIN_ACTIONS/)
+  assert.match(roleGuard, /event\.stopImmediatePropagation\(\)/)
+  assert.match(roleGuard, /kcpAccess\(\)\.canDrive/)
+  assert.match(roleGuard, /querySelectorAll\(\[/)
+  assert.match(roleGuard, /data-action="accept-cover"/)
+  assert.match(roleGuard, /data-action="open-generic-schedule-builder"|open-generic-schedule-builder/)
 })
 
 test('new schedule drafts do not invent a weekday or clock time', () => {
