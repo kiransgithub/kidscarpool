@@ -40,8 +40,17 @@ jobs:
           json.loads(Path('web/manifest.webmanifest').read_text())
           erd = Path('docs/database-erd.md').read_text()
           assert '```mermaid' in erd and 'erDiagram' in erd, 'Database ERD is missing'
-          assert Path('web/generic-schedule.css').exists(), 'Generic schedule builder CSS is missing'
-          assert Path('web/generic-schedule.js').exists(), 'Generic schedule helper module is missing'
+
+          required_assets = [
+              'web/generic-schedule.css',
+              'web/generic-schedule.js',
+              'web/schedule-builder-usability.css',
+              'web/weekly-matrix-flow.css',
+              'web/app.parts/12-weekly-matrix-flow.js',
+              'web/app.parts/13-published-availability.js'
+          ]
+          for asset in required_assets:
+              assert Path(asset).exists(), f'Missing required client asset: {asset}'
 
           migrations = sorted(Path('supabase/migrations').glob('*.sql'))
           assert migrations, 'No Supabase migrations found'
@@ -50,23 +59,21 @@ jobs:
               assert text.count('$$') % 2 == 0, f'Unbalanced $$ in {migration}'
               assert text.strip().endswith('commit;'), f'{migration} must end in commit;'
 
-          # Production scheduling is data-driven. Domain-specific identities are
-          # allowed only in seed/test fixtures, never in the generic schema,
-          # editor, occurrence resolver, publisher or legacy-import adapter.
-          generic_paths = [
-              'supabase/migrations/202608060018_kcp_generic_schedule_schema.sql',
-              'supabase/migrations/202608060022_kcp_generic_schedule_drafts.sql',
-              'supabase/migrations/202608060023_kcp_generic_schedule_occurrences.sql',
-              'supabase/migrations/202608060024_kcp_generic_schedule_publish.sql',
-              'supabase/migrations/202608060025_kcp_generic_schedule_legacy_import.sql'
-          ]
-          for path in generic_paths:
-              assert Path(path).exists(), f'Missing generic scheduling migration: {path}'
-          generic_engine = '\n'.join(Path(path).read_text() for path in generic_paths)
-          forbidden = re.compile(r'\b(Kiran|Mohan|Santhosh|Pavan|BASIS|DRMA)\b', re.I)
-          match = forbidden.search(generic_engine)
-          assert not match, f'Hard-coded scheduling identity found in generic engine: {match.group(0)}'
-          print(f'Validated {len(migrations)} migrations and genericity guard')
+          # The repository uses one consolidated baseline migration. Scenario
+          # names are allowed in comments, seeds and tests, never in executable
+          # production scheduling SQL.
+          baseline = Path('supabase/migrations/00000000000001_kcp_baseline.sql')
+          assert baseline.exists(), 'Consolidated KCP baseline migration is missing'
+          executable_sql = re.sub(r'--[^\n]*', '', baseline.read_text())
+          forbidden = re.compile(r'\b(Kiran|Mohan|Santhosh|Pavan|DRMA)\b', re.I)
+          match = forbidden.search(executable_sql)
+          assert not match, f'Hard-coded scheduling identity found in production SQL: {match.group(0)}'
+
+          # The database and client must agree on the manual start window.
+          assert "p_scheduled - interval '10 minutes'" in executable_sql
+          assert "p_scheduled + interval '90 minutes'" in executable_sql
+
+          print(f'Validated {len(migrations)} migration(s), client assets and genericity guard')
           PY
 
   fresh-supabase-database:
@@ -78,7 +85,7 @@ jobs:
         with:
           version: 2.111.0
           github-token: ${{ github.token }}
-      - name: Apply every migration to a fresh local Supabase database
+      - name: Apply the consolidated baseline to a fresh local Supabase database
         run: supabase db start
       - name: Fail on database lint findings
         run: |
@@ -94,15 +101,21 @@ jobs:
               raise SystemExit(f'Database lint returned {len(findings)} finding(s)')
           print('Database lint returned zero findings')
           PY
-      - name: Run database regression and integration suites
+      - name: Run consolidated database regression and integration suites
         run: |
           DB_CONTAINER="$(docker ps --filter 'name=supabase_db_' --format '{{.Names}}' | head -1)"
           test -n "$DB_CONTAINER"
-          docker exec -i "$DB_CONTAINER" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < supabase/tests/regression_20260806_usability.sql
-          docker exec -i "$DB_CONTAINER" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < supabase/tests/integration_generic_group_lifecycle.sql
-          docker exec -i "$DB_CONTAINER" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < supabase/tests/integration_recovery_cover_withdrawal.sql
-          docker exec -i "$DB_CONTAINER" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < supabase/tests/integration_generic_schedule_builder.sql
-          docker exec -i "$DB_CONTAINER" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < supabase/tests/integration_stable_participant_recovery.sql
-          docker exec -i "$DB_CONTAINER" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < supabase/tests/regression_owner_transfer_invariant.sql
+          run_sql() {
+            echo "==> $1"
+            docker exec -i "$DB_CONTAINER" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < "$2"
+          }
+          # The local Supabase stack already owns auth.users/auth.uid(). This
+          # helper adds only auth.become(), unlike the plain-Postgres harness.
+          run_sql "Supabase auth impersonation helper" 00_supabase_become.sql
+          run_sql "BASIS pilot seed" supabase/seeds/basis_pilot.sql
+          run_sql "BASIS generic-engine equivalence" supabase/tests/equivalence_basis_generic.sql
+          run_sql "single-owner invariant" supabase/tests/regression_owner_invariant.sql
+          run_sql "group lifecycle end to end" supabase/tests/integration_group_lifecycle.sql
+          run_sql "weekend schedule and availability" supabase/tests/regression_weekend_schedule.sql
       - name: Show migration status
         run: supabase migration list --local

@@ -1,0 +1,615 @@
+/* Compact weekly schedule and availability layout.
+ * Reuses the KCP theme tokens and keeps advanced controls available on demand.
+ */
+
+/* Keep the progress control in normal document flow. The earlier sticky bar
+ * could overlap the next card after iOS restored a scrolled modal position. */
+.schedule-progress {
+  position: static !important;
+  top: auto !important;
+}
+
+.schedule-step-head {
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.schedule-step-head > div:last-child {
+  min-width: 0;
+  text-align: left;
+}
+
+.schedule-step-head h3,
+.schedule-builder-form label,
+.schedule-builder-form h2,
+.schedule-builder-form h3,
+.schedule-builder-form h4,
+.rotation-person strong {
+  color: var(--ink);
+}
+
+.schedule-step-active .schedule-step-number {
+  display: none;
+}
+
+.schedule-builder-modal[data-current-schedule-step="2"] .schedule-builder-intro,
+.schedule-builder-modal[data-current-schedule-step="3"] .schedule-builder-intro,
+.schedule-builder-modal[data-current-schedule-step="4"] .schedule-builder-intro {
+  display: none;
+}
+
+.schedule-builder-modal[data-current-schedule-step="2"] [data-schedule-step-panel="2"] > .schedule-step-head {
+  display: none;
+}
+
+.weekly-schedule-matrix {
+  display: grid;
+  gap: 6px;
+}
+
+.weekly-matrix-intro {
+  display: grid;
+  gap: 3px;
+  margin-bottom: 4px;
+  padding: 10px 12px;
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--blue) 11%, var(--surface));
+}
+
+.weekly-matrix-intro strong {
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.weekly-matrix-intro span {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.weekly-matrix-head,
+.weekly-matrix-row {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) minmax(0, 1fr);
+  gap: 7px;
+  align-items: stretch;
+}
+
+.weekly-matrix-head {
+  padding: 0 7px;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.weekly-matrix-head span:not(:first-child) {
+  text-align: center;
+}
+
+.weekly-matrix-row {
+  position: relative;
+  min-height: 54px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-2);
+}
+
+.weekly-matrix-row:not(.enabled) {
+  opacity: .68;
+}
+
+.weekly-day-toggle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  color: var(--ink);
+}
+
+.weekly-day-toggle input {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  margin: 0;
+  padding: 0;
+}
+
+.weekly-day-toggle span,
+.weekly-day-toggle strong,
+.weekly-day-toggle small {
+  display: block;
+  min-width: 0;
+}
+
+.weekly-day-toggle strong {
+  font-size: 13px;
+}
+
+.weekly-day-toggle small {
+  margin-top: 1px;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 8px;
+  text-overflow: ellipsis;
+}
+
+.weekly-time-cell {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 5px 6px;
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.weekly-time-cell label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 850;
+}
+
+.weekly-time-cell label input {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  padding: 0;
+}
+
+.weekly-time-cell > input[type="time"] {
+  min-width: 0;
+  height: 28px;
+  padding: 2px 4px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  text-align: center;
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.weekly-time-cell > input[type="time"]:disabled {
+  color: var(--muted);
+  opacity: .58;
+}
+
+.weekly-advanced-badge {
+  position: absolute;
+  right: 7px;
+  bottom: -5px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: var(--purple);
+  color: white;
+  font-size: 7px;
+  font-weight: 900;
+}
+
+.weekly-advanced-rides {
+  margin-top: 8px;
+}
+
+.weekly-advanced-content {
+  display: grid;
+  gap: 10px;
+  padding: 0 10px 10px;
+}
+
+.weekly-advanced-content #scheduleSessionsList {
+  margin: 0;
+}
+
+/* Confirmation before previewing driver assignments. */
+.driver-confirm-dialog {
+  width: min(92vw, 520px);
+}
+
+.driver-confirm-list,
+.driver-confirm-group {
+  display: grid;
+  gap: 8px;
+}
+
+.driver-confirm-group {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-2);
+}
+
+.driver-confirm-group > strong {
+  color: var(--ink);
+}
+
+.driver-confirm-chip {
+  display: block;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.driver-confirm-chip.included {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.driver-confirm-chip.excluded {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.driver-confirm-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+}
+
+/* One complete week at a time in Preview. */
+.weekly-preview-toolbar {
+  display: grid;
+  grid-template-columns: 42px 1fr 42px;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 9px;
+}
+
+.weekly-preview-toolbar button {
+  min-width: 0;
+  height: 40px;
+  padding: 0;
+  font-size: 24px;
+}
+
+.weekly-preview-toolbar > div {
+  text-align: center;
+}
+
+.weekly-preview-toolbar strong,
+.weekly-preview-toolbar span {
+  display: block;
+}
+
+.weekly-preview-toolbar strong {
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.weekly-preview-toolbar span {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.weekly-preview-grid {
+  display: grid;
+  gap: 5px;
+}
+
+.weekly-preview-day {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  gap: 7px;
+  min-height: 45px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+
+.weekly-preview-day.has-rides {
+  border-color: color-mix(in srgb, var(--blue) 36%, var(--line));
+}
+
+.weekly-preview-date {
+  display: grid;
+  place-content: center;
+  text-align: center;
+}
+
+.weekly-preview-date strong,
+.weekly-preview-date span {
+  display: block;
+}
+
+.weekly-preview-date strong {
+  color: var(--blue);
+  font-size: 12px;
+}
+
+.weekly-preview-date span {
+  margin-top: 1px;
+  color: var(--muted);
+  font-size: 8px;
+}
+
+.weekly-preview-rides {
+  display: grid;
+  gap: 4px;
+  align-content: center;
+  min-width: 0;
+}
+
+.weekly-preview-ride {
+  display: grid;
+  grid-template-columns: 60px minmax(0, 1fr) auto;
+  gap: 7px;
+  align-items: center;
+  min-width: 0;
+  padding: 5px 7px;
+  border-radius: 9px;
+  background: var(--surface);
+}
+
+.weekly-preview-ride time {
+  color: var(--ink);
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.weekly-preview-ride span,
+.weekly-preview-ride strong,
+.weekly-preview-ride small {
+  display: block;
+  min-width: 0;
+}
+
+.weekly-preview-ride strong {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.weekly-preview-ride small {
+  margin-top: 1px;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.weekly-preview-ride em {
+  max-width: 92px;
+  overflow: hidden;
+  color: var(--blue);
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.weekly-no-ride {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+/* Parent availability: all seven days with official schedule times. */
+.availability-week-matrix {
+  display: grid;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.availability-week-head,
+.availability-week-row {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr) minmax(0, 1fr);
+  gap: 7px;
+  align-items: stretch;
+}
+
+.availability-week-head {
+  padding: 0 5px;
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .05em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.availability-week-head span:first-child {
+  text-align: left;
+}
+
+.availability-week-row {
+  min-height: 52px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--surface-2);
+}
+
+.availability-day {
+  display: grid;
+  align-content: center;
+}
+
+.availability-day strong,
+.availability-day span {
+  display: block;
+}
+
+.availability-day strong {
+  color: var(--ink);
+  font-size: 12px;
+}
+
+.availability-day span {
+  color: var(--muted);
+  font-size: 8px;
+}
+
+.availability-leg {
+  display: grid;
+  place-content: center;
+  gap: 2px;
+  min-width: 0;
+  padding: 5px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--muted);
+  text-align: center;
+}
+
+.availability-leg span,
+.availability-leg time {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.availability-leg span {
+  font-size: 8px;
+  font-weight: 850;
+}
+
+.availability-leg time {
+  color: var(--ink);
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.availability-leg.selected {
+  border-color: var(--blue);
+  background: color-mix(in srgb, var(--blue) 13%, var(--surface));
+  color: var(--blue);
+}
+
+.availability-leg.not-scheduled {
+  opacity: .5;
+}
+
+.availability-time-note {
+  margin: 9px 0 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+/* Keep the bottom actions organized and touch-friendly. */
+.schedule-builder-actions,
+.schedule-builder-actions.is-final-step {
+  align-items: stretch;
+}
+
+.schedule-builder-actions button {
+  min-height: 52px;
+  padding: 11px 14px;
+  border-radius: 14px;
+}
+
+@media (max-width: 560px) {
+  .schedule-builder-form {
+    gap: 11px;
+  }
+
+  .schedule-progress {
+    gap: 4px;
+    padding: 4px;
+  }
+
+  .schedule-progress button {
+    min-height: 50px;
+    padding: 5px 3px;
+  }
+
+  .schedule-progress button > span {
+    width: 22px;
+    height: 22px;
+    margin-bottom: 3px;
+  }
+
+  .schedule-step-card {
+    padding: 12px;
+  }
+
+  .driver-confirm-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .weekly-preview-ride {
+    grid-template-columns: 56px minmax(0, 1fr) 80px;
+  }
+}
+
+@media (max-width: 380px) {
+  .weekly-matrix-head,
+  .weekly-matrix-row,
+  .availability-week-head,
+  .availability-week-row {
+    grid-template-columns: 50px minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .weekly-time-cell > input[type="time"] {
+    font-size: 10px;
+  }
+
+  .weekly-preview-ride {
+    grid-template-columns: 52px minmax(0, 1fr);
+  }
+
+  .weekly-preview-ride em {
+    grid-column: 2;
+    max-width: none;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .weekly-matrix-intro,
+  .weekly-matrix-row,
+  .weekly-time-cell,
+  .weekly-advanced-content,
+  .driver-confirm-group,
+  .weekly-preview-day,
+  .weekly-preview-ride,
+  .availability-week-row,
+  .availability-leg {
+    background: #111b2e;
+  }
+
+  .schedule-step-head h3,
+  .schedule-builder-form label,
+  .schedule-builder-form h2,
+  .schedule-builder-form h3,
+  .schedule-builder-form h4,
+  .rotation-person strong,
+  .weekly-matrix-intro strong,
+  .weekly-day-toggle,
+  .weekly-time-cell > input[type="time"],
+  .driver-confirm-group > strong,
+  .weekly-preview-toolbar strong,
+  .weekly-preview-ride time,
+  .weekly-preview-ride strong,
+  .availability-day strong,
+  .availability-leg time {
+    color: #f8fafc;
+  }
+
+  .driver-confirm-chip.included {
+    background: #123d2b;
+    color: #86efac;
+  }
+
+  .driver-confirm-chip.excluded {
+    background: #4a2a12;
+    color: #fdba74;
+  }
+
+  .availability-leg.selected {
+    background: #162d58;
+  }
+}
