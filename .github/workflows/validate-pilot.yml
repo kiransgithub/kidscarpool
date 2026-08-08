@@ -51,7 +51,9 @@ jobs:
               'web/app.parts/12-weekly-matrix-flow.js',
               'web/app.parts/13-published-availability.js',
               'web/app.parts/14-database-driven-ui.js',
-              'web/app.parts/15-generic-recovery.js'
+              'web/app.parts/15-generic-recovery.js',
+              'web/app.parts/16-role-action-guard.js',
+              'web/app.parts/17-database-state-sync.js'
           ]
           for asset in required_assets:
               assert Path(asset).exists(), f'Missing required client asset: {asset}'
@@ -80,6 +82,10 @@ jobs:
           for name, text in [('runtime', runtime), ('index', index)]:
               match = forbidden_ui.search(text)
               assert not match, f'Pilot-specific data found in production {name}: {match.group(0)}'
+
+          schedule_helper = Path('web/generic-schedule.js').read_text()
+          assert "'07:00'" not in schedule_helper, 'Generic schedule helper must not invent a morning time'
+          assert "'15:35'" not in schedule_helper, 'Generic schedule helper must not invent a pickup time'
 
           assert "p_scheduled - interval '10 minutes'" in executable_sql
           assert "p_scheduled + interval '90 minutes'" in executable_sql
