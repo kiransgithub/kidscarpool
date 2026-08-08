@@ -1411,7 +1411,8 @@ begin
     end if;
     insert into public.kcp_invitations(
         group_id, token, invited_name, role, participant_id, invited_by)
-    values (p_group_id, encode(gen_random_bytes(24), 'hex'),
+    values (p_group_id, upper(replace(gen_random_uuid()::text, '-', '') ||
+            substr(replace(gen_random_uuid()::text, '-', ''), 1, 16)),
             p_invited_name, p_role, p_participant_id,
             public.kcp_current_participant_id(p_group_id))
     returning * into v_row;
@@ -1431,7 +1432,6 @@ as $$
 declare
     v_inv public.kcp_invitations;
     v_name text;
-    v_participant uuid;
 begin
     if auth.uid() is null then raise exception 'Authentication required'; end if;
 
@@ -1454,8 +1454,7 @@ begin
         update public.kcp_group_participants
            set user_id = auth.uid(), status = 'active',
                display_name = v_name, joined_at = coalesce(joined_at, now())
-         where id = v_inv.participant_id
-        returning id into v_participant;
+         where id = v_inv.participant_id;
     else
         insert into public.kcp_group_participants(
             group_id, user_id, display_name, role, status, source,
@@ -1463,8 +1462,7 @@ begin
         values (v_inv.group_id, auth.uid(), v_name, v_inv.role, 'active',
                 'invitation', v_inv.invited_by, now())
         on conflict (group_id, user_id) where user_id is not null
-        do update set status = 'active'
-        returning id into v_participant;
+        do update set status = 'active';
     end if;
 
     update public.kcp_invitations
