@@ -8,6 +8,7 @@ on:
       - 'web/**'
       - 'supabase/**'
       - 'docs/**'
+      - '00_supabase_become.sql'
       - '.github/workflows/validate-pilot.yml'
 
 permissions:
@@ -21,16 +22,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Assemble and parse the PWA module
+      - name: Build and parse the database-driven PWA runtime
         run: |
-          cat web/app.parts/*.js > /tmp/kcp-app.mjs
+          node web/build-runtime.mjs /tmp/kcp-app.mjs
           node --check /tmp/kcp-app.mjs
           node --check web/logic.js
           node --check web/persistence.js
           node --check web/generic-schedule.js
       - name: Run client logic and visual contract tests
         run: node --test web/tests/*.test.mjs
-      - name: Validate manifest, ERD and migration structure
+      - name: Validate manifest, ERD, runtime and migration structure
         run: |
           python3 - <<'PY'
           import json
@@ -42,12 +43,15 @@ jobs:
           assert '```mermaid' in erd and 'erDiagram' in erd, 'Database ERD is missing'
 
           required_assets = [
+              'web/build-runtime.mjs',
               'web/generic-schedule.css',
               'web/generic-schedule.js',
               'web/schedule-builder-usability.css',
               'web/weekly-matrix-flow.css',
               'web/app.parts/12-weekly-matrix-flow.js',
-              'web/app.parts/13-published-availability.js'
+              'web/app.parts/13-published-availability.js',
+              'web/app.parts/14-database-driven-ui.js',
+              'web/app.parts/15-generic-recovery.js'
           ]
           for asset in required_assets:
               assert Path(asset).exists(), f'Missing required client asset: {asset}'
@@ -59,21 +63,27 @@ jobs:
               assert text.count('$$') % 2 == 0, f'Unbalanced $$ in {migration}'
               assert text.strip().endswith('commit;'), f'{migration} must end in commit;'
 
-          # The repository uses one consolidated baseline migration. Scenario
-          # names are allowed in comments, seeds and tests, never in executable
-          # production scheduling SQL.
           baseline = Path('supabase/migrations/00000000000001_kcp_baseline.sql')
           assert baseline.exists(), 'Consolidated KCP baseline migration is missing'
           executable_sql = re.sub(r'--[^\n]*', '', baseline.read_text())
-          forbidden = re.compile(r'\b(Kiran|Mohan|Santhosh|Pavan|DRMA)\b', re.I)
-          match = forbidden.search(executable_sql)
-          assert not match, f'Hard-coded scheduling identity found in production SQL: {match.group(0)}'
+          forbidden_sql = re.compile(r'\b(Kiran|Mohan|Santhosh|Santosh|Pavan|DRMA)\b', re.I)
+          match = forbidden_sql.search(executable_sql)
+          assert not match, f'Hard-coded identity found in production SQL: {match.group(0)}'
 
-          # The database and client must agree on the manual start window.
+          runtime = Path('/tmp/kcp-app.mjs').read_text()
+          index = Path('web/index.html').read_text()
+          forbidden_ui = re.compile(
+              r'BASIS|KCP-BASIS|basis-phoenix|'
+              r'\b(?:Kiran|Mohan|Santhosh|Santosh|Pavan|Thanishka|Saanvi|Kavish|Ishi)\b',
+              re.I
+          )
+          for name, text in [('runtime', runtime), ('index', index)]:
+              match = forbidden_ui.search(text)
+              assert not match, f'Pilot-specific data found in production {name}: {match.group(0)}'
+
           assert "p_scheduled - interval '10 minutes'" in executable_sql
           assert "p_scheduled + interval '90 minutes'" in executable_sql
-
-          print(f'Validated {len(migrations)} migration(s), client assets and genericity guard')
+          print(f'Validated {len(migrations)} migration(s), DB-driven runtime and genericity guards')
           PY
 
   fresh-supabase-database:
@@ -107,13 +117,12 @@ jobs:
           test -n "$DB_CONTAINER"
           run_sql() {
             echo "==> $1"
-            docker exec -i "$DB_CONTAINER" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < "$2"
+            sed 's/auth\.become/public.kcp_test_become/g' "$2" \
+              | docker exec -i "$DB_CONTAINER" psql -v ON_ERROR_STOP=1 -U postgres -d postgres
           }
-          # The local Supabase stack already owns auth.users/auth.uid(). This
-          # helper adds only auth.become(), unlike the plain-Postgres harness.
-          run_sql "Supabase auth impersonation helper" 00_supabase_become.sql
-          run_sql "BASIS pilot seed" supabase/seeds/basis_pilot.sql
-          run_sql "BASIS generic-engine equivalence" supabase/tests/equivalence_basis_generic.sql
+          run_sql "Supabase test impersonation helper" 00_supabase_become.sql
+          run_sql "pilot seed fixture" supabase/seeds/basis_pilot.sql
+          run_sql "generic-engine seed equivalence" supabase/tests/equivalence_basis_generic.sql
           run_sql "single-owner invariant" supabase/tests/regression_owner_invariant.sql
           run_sql "group lifecycle end to end" supabase/tests/integration_group_lifecycle.sql
           run_sql "weekend schedule and availability" supabase/tests/regression_weekend_schedule.sql
