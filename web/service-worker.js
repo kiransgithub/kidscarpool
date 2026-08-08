@@ -1,4 +1,4 @@
-const CACHE = 'kcp-pilot-v15-adaptive-invitations'
+const CACHE = 'kcp-pilot-v16-safety-profiles'
 const SHELL = [
   './',
   './index.html',
@@ -11,6 +11,7 @@ const SHELL = [
   './all-group-home.css',
   './role-dashboards.css',
   './adaptive-invitations.css',
+  './safety-profiles.css',
   './app.js',
   './logic.js',
   './persistence.js',
