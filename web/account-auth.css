@@ -1,0 +1,53 @@
+.account-dialog .dialog-form {
+  max-width: 520px;
+}
+
+.account-status {
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin: 4px 0 12px;
+  background: #eef4ff;
+  color: #12356b;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.account-status.success {
+  background: #ecfdf3;
+  color: #166534;
+}
+
+.account-status.error {
+  background: #fff1f2;
+  color: #9f1239;
+}
+
+.account-device-list {
+  display: grid;
+  gap: 8px;
+}
+
+.account-device {
+  align-items: center;
+}
+
+.account-device.revoked {
+  opacity: 0.65;
+}
+
+@media (prefers-color-scheme: dark) {
+  .account-status {
+    background: #102b55;
+    color: #dbeafe;
+  }
+
+  .account-status.success {
+    background: #123b2b;
+    color: #dcfce7;
+  }
+
+  .account-status.error {
+    background: #4c1723;
+    color: #ffe4e6;
+  }
+}
