@@ -26,7 +26,9 @@ test('production no longer contains a preloaded-person claim-state UI', async ()
 
   const source = await text('web/app.parts/15-generic-recovery.js')
   assert.doesNotMatch(source, /seededPilotStatus|claim_state|open-basis-recovery/i)
-  assert.match(source, /user-entered group and member identity/i)
+  assert.match(source, /No group code or member identity is embedded/i)
+  assert.match(source, /recoverGroupCode'\)\.value\.trim/)
+  assert.match(source, /recoverParentName'\)\.value\.trim/)
 })
 
 test('generic recovery UI and invitation restoration language remain present', async () => {
