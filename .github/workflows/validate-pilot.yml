@@ -31,7 +31,7 @@ jobs:
           node --check web/generic-schedule.js
       - name: Run client logic and visual contract tests
         run: node --test web/tests/*.test.mjs
-      - name: Validate manifest, ERD, runtime and migration structure
+      - name: Validate manifest, ERD, runtime and migration lineage
         run: |
           python3 - <<'PY'
           import json
@@ -58,19 +58,34 @@ jobs:
           for asset in required_assets:
               assert Path(asset).exists(), f'Missing required client asset: {asset}'
 
+          baseline = Path('supabase/baseline/00000000000001_kcp_baseline.sql')
+          assert baseline.exists(), 'Consolidated baseline must live outside the linked migration directory'
+          assert not Path('supabase/migrations/00000000000001_kcp_baseline.sql').exists(), 'Baseline must never be pushed to the linked project'
+
           migrations = sorted(Path('supabase/migrations').glob('*.sql'))
-          assert migrations, 'No Supabase migrations found'
+          versions = [item.name.split('_', 1)[0] for item in migrations]
+          expected_history = [
+              '202608060001','202608060002','202608060003','202608060004',
+              '202608060005','202608060006','202608060007','202608060008',
+              '202608060009','202608060010','202608060011','202608060012',
+              '202608060013','202608060014','202608060015','202608060016',
+              '202608060017','202608060018','202608060020','202608060021',
+              '202608060022','202608060023','202608060024','202608060025',
+              '202608060026','202608070001'
+          ]
+          assert versions[:len(expected_history)] == expected_history, (
+              f'Linked migration history changed. Expected prefix {expected_history}, got {versions}'
+          )
+          assert versions == sorted(versions), 'Migrations must remain timestamp ordered'
           for migration in migrations:
               text = migration.read_text()
               assert text.count('$$') % 2 == 0, f'Unbalanced $$ in {migration}'
               assert text.strip().endswith('commit;'), f'{migration} must end in commit;'
 
-          baseline = Path('supabase/migrations/00000000000001_kcp_baseline.sql')
-          assert baseline.exists(), 'Consolidated KCP baseline migration is missing'
           executable_sql = re.sub(r'--[^\n]*', '', baseline.read_text())
           forbidden_sql = re.compile(r'\b(Kiran|Mohan|Santhosh|Santosh|Pavan|DRMA)\b', re.I)
           match = forbidden_sql.search(executable_sql)
-          assert not match, f'Hard-coded identity found in production SQL: {match.group(0)}'
+          assert not match, f'Hard-coded identity found in production baseline: {match.group(0)}'
 
           runtime = Path('/tmp/kcp-app.mjs').read_text()
           index = Path('web/index.html').read_text()
@@ -89,19 +104,19 @@ jobs:
 
           assert "p_scheduled - interval '10 minutes'" in executable_sql
           assert "p_scheduled + interval '90 minutes'" in executable_sql
-          print(f'Validated {len(migrations)} migration(s), DB-driven runtime and genericity guards')
+          print(f'Validated {len(migrations)} linked migration(s), baseline, runtime and genericity guards')
           PY
 
   fresh-supabase-database:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: supabase/setup-cli@v2
         with:
           version: 2.111.0
           github-token: ${{ github.token }}
-      - name: Apply the consolidated baseline to a fresh local Supabase database
+      - name: Apply the restored forward migration chain to a fresh local Supabase database
         run: supabase db start
       - name: Fail on database lint findings
         run: |
