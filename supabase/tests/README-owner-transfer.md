@@ -1,0 +1,1 @@
+`regression_owner_transfer_invariant.sql` verifies that the legacy immediate unique Owner index is absent and that the recovery-safe invariant is enforced by one deferred constraint trigger. This test is intentionally separate from the cross-device recovery integration test so a future migration cannot silently reintroduce the obsolete index.
