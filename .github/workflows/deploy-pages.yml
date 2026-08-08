@@ -23,12 +23,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - name: Assemble static PWA
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Assemble database-driven static PWA
         run: |
           mkdir -p _site
           cp -R web/. _site/
-          cat web/app.parts/*.js > _site/app.js
+          node web/build-runtime.mjs _site/app.js
+          node --check _site/app.js
           rm -rf _site/app.parts
+          rm -f _site/build-runtime.mjs
           cp SchoolCarpool/Resources/Assets.xcassets/AppIcon.appiconset/KCP-AppIcon-1024.png _site/icon-1024.png
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
