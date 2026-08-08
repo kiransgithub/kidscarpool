@@ -31,11 +31,12 @@ where child.group_id = fixture.group_id
   and child.participant_id = fixture.participant_id
   and child.name = 'Rider One';
 
-insert into public.kcp_children(group_id, participant_id, name, grade_or_level, status)
-select group_id, participant_id, 'Rider Two', 'Level 2', 'active'
-from safety_fixture
-returning id into temporary table inserted_child;
-
+with inserted_child as (
+    insert into public.kcp_children(group_id, participant_id, name, grade_or_level, status)
+    select group_id, participant_id, 'Rider Two', 'Level 2', 'active'
+    from safety_fixture
+    returning id
+)
 update safety_fixture set child_two = (select id from inserted_child);
 
 select public.kcp_upsert_child_safety_profile(
@@ -69,18 +70,19 @@ select public.kcp_set_group_safety_requirement((select group_id from safety_fixt
 
 update public.kcp_groups set current_schedule_version = 1 where id = (select group_id from safety_fixture);
 
-insert into public.kcp_trips(
-    group_id, schedule_version, trip_date, kind, leg_type, display_label,
-    scheduled_driver_id, scheduled_driver_name, status, scheduled_time,
-    time_label, child_names
+with inserted_trip as (
+    insert into public.kcp_trips(
+        group_id, schedule_version, trip_date, kind, leg_type, display_label,
+        scheduled_driver_id, scheduled_driver_name, status, scheduled_time,
+        time_label, child_names
+    )
+    select group_id, 1, current_date + 1, 'morning_drop', 'outbound', 'Outbound',
+           '75111111-1111-4111-8111-111111111111'::uuid, 'Safety Owner',
+           'scheduled', now() + interval '1 day', 'Test time',
+           array['Rider One','Rider Two']::text[]
+    from safety_fixture
+    returning id
 )
-select group_id, 1, current_date + 1, 'morning_drop', 'outbound', 'Outbound',
-       '75111111-1111-4111-8111-111111111111'::uuid, 'Safety Owner',
-       'scheduled', now() + interval '1 day', 'Test time',
-       array['Rider One','Rider Two']::text[]
-from safety_fixture
-returning id into temporary table inserted_trip;
-
 update safety_fixture set trip_id = (select id from inserted_trip);
 
 do $$
