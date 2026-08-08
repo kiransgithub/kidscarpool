@@ -30,6 +30,23 @@ const sessions = [
   })
 ]
 
+test('new ride sessions do not invent times', () => {
+  const empty = createSessionDraft()
+  assert.equal(empty.outboundTime, '')
+  assert.equal(empty.returnTime, '')
+
+  const errors = validateScheduleDraft({
+    startsOn: '2026-08-10',
+    endsOn: '2026-08-31',
+    sessions: [empty],
+    strategy: 'manual',
+    participantIds: [],
+    fixedParticipantId: null
+  })
+  assert.ok(errors.some(error => error.includes('valid drop-off/outbound time')))
+  assert.ok(errors.some(error => error.includes('valid pickup/return time')))
+})
+
 test('weekday-specific evening times remain independent', () => {
   const preview = previewSchedule({
     startsOn: '2026-08-10',
