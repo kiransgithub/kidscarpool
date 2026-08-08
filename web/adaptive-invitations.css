@@ -1,0 +1,71 @@
+.invite-role-first {
+  order: -10;
+}
+
+.role-help,
+.invitation-preview {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 12px;
+  background: #f4f7fc;
+  color: #334155;
+}
+
+.role-help strong,
+.invitation-preview strong {
+  color: #10203a;
+}
+
+.role-help span,
+.invitation-preview span {
+  font-size: .86rem;
+  line-height: 1.4;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.checkbox-row input { margin-top: 4px; }
+.checkbox-row strong, .checkbox-row small { display: block; }
+.checkbox-row small { margin-top: 2px; color: #64748b; }
+
+.adaptive-invitation-row {
+  align-items: flex-start;
+}
+.adaptive-invitation-row .button-row {
+  justify-content: flex-end;
+}
+
+.invitation-accept-dialog .dialog-form {
+  max-width: 520px;
+}
+
+.invitation-preview .status-pill {
+  justify-self: start;
+  margin-top: 4px;
+}
+
+@media (max-width: 520px) {
+  .adaptive-invitation-row {
+    display: grid;
+  }
+  .adaptive-invitation-row .button-row {
+    justify-content: flex-start;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .role-help,
+  .invitation-preview {
+    background: #142947;
+    color: #d1d9e6;
+  }
+  .role-help strong,
+  .invitation-preview strong {
+    color: #f8fafc;
+  }
+  .checkbox-row small { color: #bdc9da; }
+}
