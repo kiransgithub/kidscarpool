@@ -1,4 +1,4 @@
-const CACHE = 'kcp-pilot-v9-database-driven-ui'
+const CACHE = 'kcp-pilot-v10-permanent-account'
 const SHELL = [
   './',
   './index.html',
@@ -7,6 +7,7 @@ const SHELL = [
   './generic-schedule.css',
   './schedule-builder-usability.css',
   './weekly-matrix-flow.css',
+  './account-auth.css',
   './app.js',
   './logic.js',
   './persistence.js',
