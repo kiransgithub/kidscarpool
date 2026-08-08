@@ -1,0 +1,61 @@
+name: Patch baseline invitation lint once
+
+on:
+  push:
+    branches:
+      - feature/weekly-matrix-and-availability
+    paths:
+      - '.github/workflows/patch-baseline-invitation-lint-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/weekly-matrix-and-availability
+          fetch-depth: 0
+      - name: Repair invitation token generation and unused variable
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('supabase/migrations/00000000000001_kcp_baseline.sql')
+          text = path.read_text()
+
+          old_token = "values (p_group_id, encode(gen_random_bytes(24), 'hex'),"
+          new_token = "values (p_group_id, upper(replace(gen_random_uuid()::text, '-', '') ||\n            substr(replace(gen_random_uuid()::text, '-', ''), 1, 16)),"
+          if old_token not in text:
+              raise SystemExit('Invitation token expression was not found')
+          text = text.replace(old_token, new_token, 1)
+
+          old_declaration = "    v_name text;\n    v_participant uuid;\n"
+          if old_declaration not in text:
+              raise SystemExit('Unused invitation participant declaration was not found')
+          text = text.replace(old_declaration, "    v_name text;\n", 1)
+
+          old_seed_returning = "         where id = v_inv.participant_id\n        returning id into v_participant;"
+          new_seed_returning = "         where id = v_inv.participant_id;"
+          if old_seed_returning not in text:
+              raise SystemExit('Seeded participant RETURNING clause was not found')
+          text = text.replace(old_seed_returning, new_seed_returning, 1)
+
+          old_insert_returning = "        on conflict (group_id, user_id) where user_id is not null\n        do update set status = 'active'\n        returning id into v_participant;"
+          new_insert_returning = "        on conflict (group_id, user_id) where user_id is not null\n        do update set status = 'active';"
+          if old_insert_returning not in text:
+              raise SystemExit('Invitation participant RETURNING clause was not found')
+          text = text.replace(old_insert_returning, new_insert_returning, 1)
+
+          path.write_text(text)
+          PY
+      - name: Remove one-time workflow and commit
+        run: |
+          rm .github/workflows/patch-baseline-invitation-lint-once.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add supabase/migrations/00000000000001_kcp_baseline.sql .github/workflows/patch-baseline-invitation-lint-once.yml
+          git commit -m 'Fix consolidated baseline invitation functions'
+          git push origin HEAD:feature/weekly-matrix-and-availability
