@@ -1,0 +1,108 @@
+.schedule-template-panel {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0 16px;
+  padding: 14px;
+  border: 1px solid #dbe3ef;
+  border-radius: 16px;
+  background: #f8fafc;
+}
+.schedule-template-panel h4 { margin: 3px 0; }
+.schedule-template-panel p { margin: 0; color: #64748b; font-size: .84rem; }
+.schedule-template-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.schedule-quick-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0 0 12px;
+}
+.quick-action-chip {
+  min-height: 38px;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  padding: 7px 12px;
+  background: white;
+  color: #334155;
+  font-weight: 700;
+}
+
+.schedule-impact-summary {
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid #86efac;
+  border-radius: 16px;
+  background: #f0fdf4;
+}
+.schedule-impact-summary.has-conflicts {
+  border-color: #fca5a5;
+  background: #fff7f7;
+}
+.schedule-impact-summary h3 { margin: 3px 0; }
+.impact-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 12px 0;
+}
+.impact-metric-grid div {
+  padding: 10px 8px;
+  border-radius: 12px;
+  background: rgb(255 255 255 / .8);
+  text-align: center;
+}
+.impact-metric-grid strong,
+.impact-metric-grid span { display: block; }
+.impact-metric-grid strong { font-size: 1.15rem; }
+.impact-metric-grid span { margin-top: 2px; color: #64748b; font-size: .72rem; }
+.impact-warning {
+  display: grid;
+  gap: 3px;
+  margin: 10px 0;
+  padding: 10px;
+  border-radius: 12px;
+  background: #fffbeb;
+  color: #92400e;
+}
+.impact-warning span { font-size: .82rem; }
+.impact-conflicts {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+}
+.impact-conflicts h4 { margin: 0; }
+.impact-conflicts > div {
+  display: grid;
+  gap: 3px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  background: #fff1f2;
+}
+.impact-conflicts span { color: #9f1239; font-size: .8rem; line-height: 1.4; }
+.impact-reason-label { margin-top: 12px; }
+
+.schedule-ack-card { border-left: 4px solid #f59e0b; }
+.conflict-card { border-left: 4px solid #dc2626; }
+
+@media (max-width: 520px) {
+  .schedule-template-controls { grid-template-columns: 1fr; }
+  .impact-metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .quick-action-chip { flex: 1 1 calc(50% - 8px); }
+}
+
+@media (prefers-color-scheme: dark) {
+  .schedule-template-panel { background: #10213d; border-color: #29405f; }
+  .schedule-template-panel p { color: #bdc9da; }
+  .quick-action-chip { background: #142947; border-color: #365272; color: #f8fafc; }
+  .schedule-impact-summary { background: #123b2b; border-color: #238a57; }
+  .schedule-impact-summary.has-conflicts { background: #4c1723; border-color: #9f1239; }
+  .impact-metric-grid div { background: rgb(7 17 31 / .55); }
+  .impact-metric-grid span { color: #bdc9da; }
+  .impact-warning { background: #442d0a; color: #fde68a; }
+  .impact-conflicts > div { background: #4c1723; }
+  .impact-conflicts span { color: #fecdd3; }
+}
