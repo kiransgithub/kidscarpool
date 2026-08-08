@@ -77,9 +77,11 @@ test('only one schedule step is displayed and advanced options remain expandable
   assert.match(styles, /@media \(max-width: 560px\)/)
 })
 
-test('service worker advances and caches the usability stylesheet', async () => {
+test('service worker retains the usability stylesheet as cache versions advance', async () => {
   const worker = await text('web/service-worker.js')
+  const version = worker.match(/kcp-pilot-v(\d+)-/)?.[1]
 
-  assert.match(worker, /kcp-pilot-v7-schedule-builder-usability/)
+  assert.ok(version, 'Service-worker cache must contain a numeric application version')
+  assert.ok(Number(version) >= 7, `Expected cache version 7 or newer, found ${version}`)
   assert.match(worker, /\.\/schedule-builder-usability\.css/)
 })
