@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#071a3d">
+  <title>KCP Support Console</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header class="support-header">
+    <div><span>KCP PLATFORM</span><h1>Support Console</h1></div>
+    <a href="../">Family app</a>
+  </header>
+
+  <main>
+    <section id="supportStatus" class="banner">Checking platform access…</section>
+
+    <section id="supportApp" class="hidden">
+      <div class="toolbar">
+        <input id="groupSearch" type="search" placeholder="Search group name, code or destination" aria-label="Search groups">
+        <button id="refreshSupport" type="button">Refresh</button>
+      </div>
+
+      <nav class="support-tabs" aria-label="Support sections">
+        <button class="active" data-support-tab="groups" type="button">Groups</button>
+        <button data-support-tab="cases" type="button">Cases</button>
+        <button data-support-tab="errors" type="button">Errors</button>
+      </nav>
+
+      <section data-support-panel="groups">
+        <div id="groupList" class="support-grid"></div>
+      </section>
+      <section data-support-panel="cases" class="hidden">
+        <div id="caseList" class="support-grid"></div>
+      </section>
+      <section data-support-panel="errors" class="hidden">
+        <div id="errorList" class="support-grid"></div>
+      </section>
+    </section>
+  </main>
+
+  <dialog id="groupOverviewDialog">
+    <div class="dialog-head"><h2>Group overview</h2><button id="closeGroupOverview" type="button" aria-label="Close">×</button></div>
+    <div id="groupOverviewContent"></div>
+  </dialog>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
