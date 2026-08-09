@@ -95,6 +95,7 @@ language plpgsql
 security definer
 set search_path = public, pg_catalog
 as $$
+#variable_conflict use_column
 declare
     normalized_id text := nullif(trim(p_device_id), '');
     normalized_label text := coalesce(nullif(trim(p_label), ''), 'KCP device');

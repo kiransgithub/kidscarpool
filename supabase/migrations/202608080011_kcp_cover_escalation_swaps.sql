@@ -406,10 +406,13 @@ begin
         where swap.status = 'pending'
           and (swap.requested_by = auth.uid() or swap.requested_from = auth.uid() or member.role in ('owner','admin'))
     )
-    select * from covers
-    union all
-    select * from swaps
-    order by requires_my_action desc, created_at desc
+    select operations.*
+    from (
+        select * from covers
+        union all
+        select * from swaps
+    ) operations
+    order by operations.requires_my_action desc, operations.created_at desc
     limit least(greatest(p_limit, 1), 1000);
 end;
 $$;

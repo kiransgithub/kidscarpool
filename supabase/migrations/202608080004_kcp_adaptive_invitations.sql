@@ -146,6 +146,7 @@ language plpgsql
 security definer
 set search_path = public, auth, pg_catalog
 as $$
+#variable_conflict use_column
 declare
     invitation public.kcp_invitations;
     normalized_phone text := nullif(regexp_replace(coalesce(p_phone,''), '[^0-9]', '', 'g'), '');

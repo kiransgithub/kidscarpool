@@ -9,6 +9,8 @@ alter table public.kcp_break_glass_events
     add column if not exists expires_at timestamptz,
     add column if not exists closed_at timestamptz,
     add column if not exists closed_by uuid references auth.users(id) on delete set null,
+    add column if not exists resource_type text not null default 'group_sensitive_data',
+    add column if not exists resource_id text,
     add column if not exists resource_scope text not null default 'group';
 
 create table if not exists public.kcp_client_heartbeats (
@@ -68,6 +70,24 @@ as $$
               when 'support_readonly' then administrator.role in ('super_admin','support_admin','support_readonly')
               else false
           end
+    );
+$$;
+
+create or replace function public.kcp_write_platform_audit(
+    p_action text,
+    p_entity_type text,
+    p_entity_id text,
+    p_details jsonb default '{}'::jsonb
+)
+returns void
+language sql
+security definer
+set search_path = public, pg_catalog
+as $$
+    insert into public.kcp_platform_audit_events(
+        actor_id, action, entity_type, entity_id, details
+    ) values (
+        auth.uid(), p_action, p_entity_type, p_entity_id, coalesce(p_details, '{}'::jsonb)
     );
 $$;
 
@@ -619,6 +639,7 @@ $$;
 
 revoke all on function public.kcp_mask_support_text(text) from public, anon, authenticated;
 revoke all on function public.kcp_is_platform_admin(text) from public, anon, authenticated;
+revoke all on function public.kcp_write_platform_audit(text,text,text,jsonb) from public, anon, authenticated;
 revoke all on function public.kcp_register_client_heartbeat(text,text,text,text,text,uuid) from public, anon;
 revoke all on function public.kcp_support_me() from public, anon;
 revoke all on function public.kcp_support_dashboard() from public, anon;
