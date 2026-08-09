@@ -47,6 +47,30 @@ as $$
     end;
 $$;
 
+-- Role-aware overload for support-console authorization. The original UUID
+-- overload checks a specific user; this one checks the current user's minimum
+-- platform role without relying on an invalid text-to-UUID cast.
+create or replace function public.kcp_is_platform_admin(p_required_role text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public, pg_catalog
+as $$
+    select exists (
+        select 1
+        from public.kcp_platform_admins administrator
+        where administrator.user_id = auth.uid()
+          and administrator.status = 'active'
+          and case lower(trim(coalesce(p_required_role,'')))
+              when 'super_admin' then administrator.role = 'super_admin'
+              when 'support_admin' then administrator.role in ('super_admin','support_admin')
+              when 'support_readonly' then administrator.role in ('super_admin','support_admin','support_readonly')
+              else false
+          end
+    );
+$$;
+
 create or replace function public.kcp_register_client_heartbeat(
     p_client_instance_id text,
     p_build_version text,
@@ -594,6 +618,7 @@ end;
 $$;
 
 revoke all on function public.kcp_mask_support_text(text) from public, anon, authenticated;
+revoke all on function public.kcp_is_platform_admin(text) from public, anon, authenticated;
 revoke all on function public.kcp_register_client_heartbeat(text,text,text,text,text,uuid) from public, anon;
 revoke all on function public.kcp_support_me() from public, anon;
 revoke all on function public.kcp_support_dashboard() from public, anon;
