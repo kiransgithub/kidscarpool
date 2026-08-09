@@ -15,7 +15,7 @@ let source = parts
   .join('\n\n')
 
 // Remove the retired client-side calendar template. Calendar source files,
-// structured events, groups, people and schedules now come from Supabase.
+// structured events, groups, people and schedules come from the database.
 source = source
   .replace(/const BASIS_CALENDAR_SHA256 = .*\n/, '')
   .replace(/const BASIS_EVENTS = \[[\s\S]*?\n\]\n\nfunction event\([\s\S]*?\n\}\n/, '')
@@ -40,7 +40,11 @@ const replacements = new Map([
   ['Pavan', 'Member'],
   ['Mohan', 'Member'],
   ['Kiran', 'Member'],
-  ['BASIS', 'Destination']
+  ['BASIS', 'Destination'],
+  ['Connecting to Supabase…', 'Connecting…'],
+  ['Connected securely to Supabase.', 'Online'],
+  ['Connected — complete your pilot profile or restore an invitation.', 'Connected — complete your profile or restore an invitation.'],
+  ['KCP Supabase pilot', 'KCP pilot']
 ])
 for (const [from, to] of replacements) source = source.split(from).join(to)
 
@@ -51,11 +55,13 @@ const forbidden = [
   /3a5ffb0feda17ce6a0a7655b3d6d2a9c21cbb3c473df1adcc1c8dc81ba170464/i,
   /\b(?:Thanishka|Saanvi|Kavish|Ishi|Santhosh|Santosh|Pavan|Mohan|Kiran)\b/i,
   /BASIS_EVENTS/,
-  /BASIS_CALENDAR_SHA256/
+  /BASIS_CALENDAR_SHA256/,
+  /Connected securely to Supabase/i,
+  /Connecting to Supabase/i
 ]
 for (const pattern of forbidden) {
   const match = source.match(pattern)
-  if (match) throw new Error(`Production runtime still contains pilot data: ${match[0]}`)
+  if (match) throw new Error(`Production runtime still contains private or infrastructure-facing data: ${match[0]}`)
 }
 
 fs.mkdirSync(path.dirname(output), { recursive: true })
