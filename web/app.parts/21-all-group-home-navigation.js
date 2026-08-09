@@ -190,7 +190,7 @@ function weeklyScheduleGlance(rows) {
         <span role="columnheader">Drop-off</span>
         <span role="columnheader">Pickup</span>
       </div>
-      ${[0, 1, 2, 3, 4].map(dayOffset => weeklyScheduleRow(weekStart, dayOffset, rows)).join('')}
+      ${[0, 1, 2, 3, 4].map(dayOffset => agendaWeeklyScheduleRow(weekStart, dayOffset, rows)).join('')}
     </div>
   </section>`
 }
@@ -206,7 +206,7 @@ function agendaWeekStart(offset = 0) {
   return today
 }
 
-function weeklyScheduleRow(weekStart, dayOffset, rows) {
+function agendaWeeklyScheduleRow(weekStart, dayOffset, rows) {
   const date = new Date(weekStart)
   date.setDate(date.getDate() + dayOffset)
   const dateKey = localAgendaDateKey(date)

@@ -20,7 +20,6 @@ as $$
 declare
     auth_user auth.users;
     source_profile public.kcp_profiles;
-    current_profile public.kcp_profiles;
     source_membership record;
     resolved_name text;
     recovered_count integer := 0;
@@ -46,11 +45,6 @@ begin
         nullif(initcap(replace(replace(split_part(auth_user.email, '@', 1), '.', ' '), '_', ' ')), ''),
         'KCP member'
     ), 80);
-
-    select profile.* into current_profile
-      from public.kcp_profiles profile
-     where profile.id = auth.uid()
-     for update;
 
     select profile.* into source_profile
       from public.kcp_profiles profile
