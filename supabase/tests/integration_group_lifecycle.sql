@@ -76,24 +76,23 @@ begin
     -- ---- constraint request + admin review --------------------------------
     v_req := public.kcp_submit_constraint_request(
         v_group.id, '{1,3,5}'::smallint[], '{1,3}'::smallint[], 'No Tuesdays');
-    assert (select status from public.kcp_constraints where id = v_req) = 'pending',
+    assert (select status from public.kcp_constraint_requests where id = v_req) = 'pending',
            'submitted constraints start pending';
 
     perform auth.become(v_parent);
     v_failed := false;
     begin
-        perform public.kcp_review_constraint_request(v_req, true);
+        perform public.kcp_review_constraint_request(v_req, 'approved');
     exception when others then v_failed := true;
     end;
     assert v_failed, 'a plain parent must not be able to approve constraints';
 
     perform auth.become(v_owner);
-    perform public.kcp_review_constraint_request(v_req, true, 'Approved');
-    assert (select status from public.kcp_constraints where id = v_req) = 'approved',
+    perform public.kcp_review_constraint_request(v_req, 'approved', 'Approved');
+    assert (select status from public.kcp_constraint_requests where id = v_req) = 'approved',
            'admin approval must flip status';
     assert (select count(*) from public.kcp_constraints
-            where group_id = v_group.id and participant_id = v_parent_pid
-              and status = 'approved') = 1,
+            where group_id = v_group.id and user_id = v_parent) = 1,
            'exactly one approved constraint row per participant';
 
     -- ---- build a schedule: Mon+Wed, alternating drivers per week ----------
