@@ -155,12 +155,17 @@ select public.kcp_save_schedule_plan(
     p_fixed_participant_id => (select primary_driver_participant from impact_fixture)
 );
 
-update impact_fixture fixture
+with prepared as (
+    select result.change_set_id
+    from impact_fixture fixture
+    cross join lateral public.kcp_prepare_schedule_change(
+        fixture.primary_plan,
+        'Move the ride and correct its time'
+    ) result
+)
+update impact_fixture
 set change_set = prepared.change_set_id
-from public.kcp_prepare_schedule_change(
-    fixture.primary_plan,
-    'Move the ride and correct its time'
-) prepared;
+from prepared;
 
 do $$
 declare
