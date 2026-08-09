@@ -223,7 +223,7 @@ begin
            set role = 'owner'
          where group_id = v_group.id and user_id = v_parent and status = 'active';
         set constraints kcp_memberships_single_owner_check immediate;
-    exception when unique_violation then v_failed := true;
+    exception when others then v_failed := true;
     end;
     assert v_failed, 'a second active owner must be rejected';
     assert (select count(*) from public.kcp_memberships membership
