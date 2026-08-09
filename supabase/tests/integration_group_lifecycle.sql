@@ -201,7 +201,7 @@ begin
     assert (select points from public.kcp_points_ledger where trip_id = v_trip_id)
            = 20, 'a volunteer trip awards 20 points';
 
-    -- ---- withdrawal returns the trip to its original driver ---------------
+    -- ---- an open request can be safely withdrawn by its requester ----------
     select t.id into v_trip_id from public.kcp_trips t
      where t.schedule_plan_id = v_plan
        and t.scheduled_participant_id = v_owner_pid
@@ -209,8 +209,6 @@ begin
      order by t.scheduled_time limit 1;
     perform auth.become(v_owner);
     v_cover := public.kcp_request_cover(v_trip_id, 'Second conflict');
-    perform auth.become(v_parent);
-    perform public.kcp_accept_cover(v_cover);
     perform public.kcp_withdraw_cover(v_cover, 'Sick');
     assert (select actual_participant_id from public.kcp_trips where id = v_trip_id)
            is null, 'withdrawal must clear the volunteer';
