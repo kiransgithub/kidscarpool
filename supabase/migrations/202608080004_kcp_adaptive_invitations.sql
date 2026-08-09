@@ -17,6 +17,21 @@ alter table public.kcp_invitations
     add column if not exists revoked_at timestamptz,
     add column if not exists revoked_by uuid references public.kcp_profiles(id) on delete set null;
 
+-- Viewer and childless Admin memberships intentionally have no grade. Keep the
+-- legacy zero default only when a membership actually includes a child.
+create or replace function public.kcp_default_legacy_membership_grade()
+returns trigger
+language plpgsql
+set search_path = public, pg_catalog
+as $$
+begin
+    if nullif(trim(new.child_name), '') is not null then
+        new.grade := coalesce(new.grade, 0);
+    end if;
+    return new;
+end;
+$$;
+
 create unique index if not exists kcp_pending_invitation_email_per_group
     on public.kcp_invitations(group_id, lower(email))
     where email is not null and status = 'pending';
