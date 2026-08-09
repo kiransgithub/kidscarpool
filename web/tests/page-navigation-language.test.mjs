@@ -36,6 +36,10 @@ test('long dialogs keep Back or Close controls pinned above their scroll area', 
   assert.match(navigationStyles, /\.dialog-form > \.dialog-title/)
   assert.match(navigationStyles, /\.schedule-builder-form > \.dialog-title/)
   assert.match(navigationStyles, /position:\s*sticky/)
+  assert.match(navigation, /installPersistentDialogNavigation/)
+  assert.match(navigation, /dialog-back-button/)
+  assert.match(navigation, /closeDialogToPreviousScreen/)
+  assert.match(navigationStyles, /\.dialog-title-with-back/)
   assert.match(schedule, /kcpScheduleStep === 1.*close\('cancel'\)/s)
 })
 

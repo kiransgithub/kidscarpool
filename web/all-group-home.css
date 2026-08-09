@@ -63,6 +63,76 @@
 .agenda-filter-label select { min-height: 40px; }
 
 .all-group-trip-row h3 { margin-top: 0; }
+
+.weekly-glance-card {
+  margin-bottom: 18px;
+  overflow: hidden;
+  border: 1px solid #cddcf8;
+  border-radius: 20px;
+  background: white;
+  box-shadow: 0 12px 30px rgb(21 94 239 / .09);
+}
+.weekly-glance-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px;
+  color: white;
+  background: linear-gradient(135deg, #0d2859, #155eef 72%, #7c3aed);
+}
+.weekly-glance-heading h2 { margin: 2px 0 1px; }
+.weekly-glance-heading p { margin: 0; color: #dbeafe; font-size: .78rem; font-weight: 750; }
+.weekly-glance-heading .eyebrow { color: #bfdbfe; }
+.weekly-glance-controls { display: flex; align-items: center; gap: 5px; flex: 0 0 auto; }
+.weekly-glance-controls button {
+  min-width: 36px;
+  min-height: 36px;
+  border: 1px solid rgb(255 255 255 / .32);
+  border-radius: 11px;
+  padding: 6px 9px;
+  background: rgb(255 255 255 / .14);
+  color: white;
+  font-weight: 850;
+}
+.weekly-glance-grid { display: grid; }
+.weekly-glance-row {
+  display: grid;
+  grid-template-columns: minmax(58px, .7fr) repeat(2, minmax(0, 1.5fr));
+  min-height: 62px;
+  border-top: 1px solid #e5ebf4;
+}
+.weekly-glance-row > * {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  padding: 9px 10px;
+  border-left: 1px solid #e5ebf4;
+}
+.weekly-glance-row > :first-child { border-left: 0; }
+.weekly-glance-header { min-height: 38px; background: #edf3ff; }
+.weekly-glance-header span { color: #334e7d; font-size: .72rem; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; }
+.weekly-glance-day { flex-direction: column; align-items: flex-start; justify-content: center; }
+.weekly-glance-day strong { color: #0f2d5c; font-size: .92rem; }
+.weekly-glance-day span { color: #667085; font-size: .68rem; }
+.weekly-driver-cell { flex-direction: column; align-items: stretch; justify-content: center; gap: 5px; }
+.weekly-driver {
+  display: grid;
+  width: 100%;
+  gap: 2px;
+  border: 0;
+  border-radius: 10px;
+  padding: 7px 8px;
+  background: #eef4ff;
+  color: #102a56;
+  text-align: left;
+}
+.weekly-driver span { overflow: hidden; color: #526985; font-size: .62rem; font-weight: 750; text-overflow: ellipsis; white-space: nowrap; }
+.weekly-driver strong { overflow-wrap: anywhere; color: #102a56; font-size: .86rem; font-weight: 950; }
+.weekly-driver-empty { justify-content: center; color: #98a2b3; font-size: .75rem; font-weight: 750; }
+.schedule-detail-heading { margin: 4px 2px 12px; }
+.schedule-detail-heading h2 { margin: 3px 0 0; }
+
 .request-card {
   padding: 16px;
   border: 1px solid #dbe3ef;
@@ -79,12 +149,23 @@
 
 @media (prefers-color-scheme: dark) {
   .group-context-badge { background: #17366b; color: #dbeafe; }
-  .more-card, .request-card { background: #10213d; border-color: #29405f; color: #f8fafc; }
+  .more-card, .request-card, .weekly-glance-card { background: #10213d; border-color: #29405f; color: #f8fafc; }
   .more-card small, .attention-row small, .agenda-filter-label { color: #bdc9da; }
   .attention-row { border-color: #29405f; }
+  .weekly-glance-row, .weekly-glance-row > * { border-color: #29405f; }
+  .weekly-glance-header { background: #172d4f; }
+  .weekly-glance-header span, .weekly-glance-day strong { color: #dbeafe; }
+  .weekly-glance-day span, .weekly-driver-empty { color: #aebcd0; }
+  .weekly-driver { background: #17366b; }
+  .weekly-driver strong { color: #f8fafc; }
+  .weekly-driver span { color: #c6d5e9; }
 }
 
 @media (max-width: 380px) {
   .more-grid { grid-template-columns: 1fr; }
   .bottom-nav[data-five-tab="true"] .nav-item small { font-size: .63rem; }
+  .weekly-glance-heading { align-items: flex-start; flex-direction: column; }
+  .weekly-glance-row { grid-template-columns: 52px repeat(2, minmax(0, 1fr)); }
+  .weekly-glance-row > * { padding: 7px 6px; }
+  .weekly-driver { padding-inline: 6px; }
 }

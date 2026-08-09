@@ -28,6 +28,17 @@ test('Home and Schedule load rides across every active group membership', () => 
   assert.match(source, /allGroupScheduleFilter/)
 })
 
+test('Schedule starts with a condensed weekly driver calendar', () => {
+  assert.match(source, /weeklyScheduleGlance/)
+  assert.match(source, /Weekly drivers/)
+  assert.match(source, /Drop-off/)
+  assert.match(source, /Pickup/)
+  assert.match(source, /weekly-schedule-previous/)
+  assert.match(source, /actual_driver_name \|\| item\.scheduled_driver_name/)
+  assert.match(styles, /\.weekly-glance-row[\s\S]*grid-template-columns:/)
+  assert.match(styles, /\.weekly-driver strong[\s\S]*font-weight:\s*950/)
+})
+
 test('requests feed combines cover and availability work across groups', () => {
   assert.match(migration, /kcp_my_requests/)
   assert.match(migration, /'cover'::text/)

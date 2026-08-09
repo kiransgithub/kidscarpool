@@ -1,4 +1,4 @@
-const CACHE = 'kcp-pilot-v25-navigation-language-v19-driver-mode-v26-focus-card-contrast'
+const CACHE = 'kcp-pilot-v19-driver-mode-v25-navigation-language-v26-focus-card-contrast-v27-pinned-dialog-v28-session-resume-v29-weekly-glance'
 const SHELL = [
   './',
   './index.html',

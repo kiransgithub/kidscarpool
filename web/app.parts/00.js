@@ -175,6 +175,7 @@ async function init() {
     const { data: { session }, error: sessionError } = await supabase.auth.getSession()
     if (sessionError) throw sessionError
 
+    const returningSession = Boolean(session)
     state.session = session
     if (!state.session) {
       const { data, error } = await supabase.auth.signInAnonymously()
@@ -184,6 +185,9 @@ async function init() {
 
     await restoreRememberedMemberships()
     await loadProfile()
+    if (!state.profile && typeof ensureVerifiedKcpAccount === 'function') {
+      await ensureVerifiedKcpAccount()
+    }
     hide('loadingView')
     if (!state.profile) {
       show('onboardingView')
@@ -193,7 +197,7 @@ async function init() {
       return
     }
 
-    await enterApp()
+    await enterApp({ view: returningSession || state.identity?.identity_verified ? 'home' : state.currentView })
   } catch (error) {
     hide('loadingView')
     show('onboardingView')

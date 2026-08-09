@@ -1,4 +1,5 @@
 .page-navigation {
+  position: -webkit-sticky;
   position: sticky;
   top: calc(70px + env(safe-area-inset-top));
   z-index: 19;
@@ -35,6 +36,7 @@
 .dialog-form > .dialog-title,
 .schedule-builder-form > .dialog-title,
 .trip-modal-header {
+  position: -webkit-sticky;
   position: sticky;
   top: 0;
   z-index: 8;
@@ -68,16 +70,44 @@
   font-weight: 850;
 }
 
-.schedule-dialog-back span { font-size: 22px; line-height: .8; }
+.dialog-title-with-back {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+}
+
+.dialog-title-with-back > h2,
+.dialog-title-with-back > div { min-width: 0; }
+
+.dialog-back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 38px;
+  border: 0;
+  border-radius: 12px;
+  padding: 8px 10px;
+  background: #eaf1ff;
+  color: var(--blue);
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.schedule-dialog-back span,
+.dialog-back-button span { font-size: 22px; line-height: .8; }
 
 @media (max-width: 420px) {
   .page-navigation { grid-template-columns: 82px 1fr 82px; padding-inline: 8px; }
   .page-navigation-button { padding-inline: 8px; }
   .page-navigation-title { font-size: 12px; }
   .schedule-dialog-navigation strong { display: none; }
+  .dialog-back-button strong { display: none; }
+  .dialog-back-button { width: 40px; justify-content: center; padding-inline: 6px; }
 }
 
 @media (prefers-color-scheme: dark) {
   .page-navigation-button,
-  .schedule-dialog-back { background: #162d58; color: #dbeafe; }
+  .schedule-dialog-back,
+  .dialog-back-button { background: #162d58; color: #dbeafe; }
 }

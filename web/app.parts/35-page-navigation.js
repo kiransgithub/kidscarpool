@@ -84,6 +84,34 @@ function closeCurrentPage() {
   navigate('home', { record: false })
 }
 
+function closeDialogToPreviousScreen(button) {
+  const dialog = button.closest('dialog')
+  if (!dialog) return
+
+  const closeButton = dialog.querySelector('.dialog-title .close-button')
+  if (closeButton && closeButton !== button) {
+    closeButton.click()
+    return
+  }
+
+  dialog.close('cancel')
+}
+
+function installPersistentDialogNavigation() {
+  qsa('dialog.modal .dialog-title').forEach(title => {
+    if (title.querySelector('.dialog-back-button, .schedule-dialog-back')) return
+
+    const back = document.createElement('button')
+    back.className = 'dialog-back-button'
+    back.type = 'button'
+    back.setAttribute('aria-label', 'Go back to the previous screen')
+    back.innerHTML = '<span aria-hidden="true">‹</span><strong>Back</strong>'
+    back.addEventListener('click', () => closeDialogToPreviousScreen(back))
+    title.classList.add('dialog-title-with-back')
+    title.insertAdjacentElement('afterbegin', back)
+  })
+}
+
 el('pageBackButton')?.addEventListener('click', navigateBack)
 el('pageCloseButton')?.addEventListener('click', closeCurrentPage)
 
@@ -92,4 +120,5 @@ window.addEventListener('popstate', event => {
   if (view && view !== state.currentView) navigate(view, { record: false })
 })
 
+installPersistentDialogNavigation()
 renderPageNavigation()

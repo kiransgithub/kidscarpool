@@ -36,12 +36,13 @@
   document.addEventListener('click', handleDelegatedClick)
 }
 
-async function enterApp() {
+async function enterApp({ view = state.currentView } = {}) {
   hide('onboardingView')
   show('bottomNav')
   showConnection('Connected securely to Supabase.', 'success')
   await refreshAll()
-  navigate(state.currentView)
+  await ensureRememberedGroups()
+  navigate(view, { record: false, restore: false })
 }
 
 async function loadProfile() {

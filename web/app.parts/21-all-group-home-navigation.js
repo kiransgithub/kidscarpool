@@ -4,6 +4,7 @@
 state.allGroupAgenda = []
 state.allGroupRequests = []
 state.agendaGroupFilter = 'all'
+state.agendaWeekOffset = 0
 
 function primaryNavIcon(name) {
   const paths = {
@@ -57,10 +58,10 @@ async function loadAllGroupFeeds() {
   }
 
   const now = new Date()
-  const from = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString()
+  const from = new Date(now.getTime() - 21 * 24 * 60 * 60 * 1000).toISOString()
   const to = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString()
   const [{ data: agenda, error: agendaError }, { data: requests, error: requestsError }] = await Promise.all([
-    supabase.rpc('kcp_my_agenda', { p_from: from, p_to: to, p_limit: 500 }),
+    supabase.rpc('kcp_my_agenda', { p_from: from, p_to: to, p_limit: 1000 }),
     supabase.rpc('kcp_my_requests', { p_limit: 300 })
   ])
 
@@ -140,9 +141,14 @@ function renderAgendaFocusCard(container, trip, heading, focusIcon) {
 renderSchedule = function () {
   const list = el('scheduleList')
   const groups = [...new Map(state.allGroupAgenda.map(item => [item.group_id, item.group_name])).entries()]
-  const rows = state.allGroupAgenda
+  const filteredRows = state.allGroupAgenda
     .filter(item => state.agendaGroupFilter === 'all' || item.group_id === state.agendaGroupFilter)
+  const detailCutoff = Date.now() - 90 * 60 * 1000
+  const rows = filteredRows
     .filter(item => !['cancelled'].includes(item.status))
+    .filter(item => ['in_progress', 'cover_requested'].includes(item.status)
+      || !item.scheduled_time
+      || new Date(item.scheduled_time).getTime() >= detailCutoff)
 
   const view = el('scheduleView')
   let filter = el('allGroupScheduleFilter')
@@ -157,9 +163,86 @@ renderSchedule = function () {
     .map(([id, name]) => `<option value="${id}">${escapeHTML(name)}</option>`).join('')
   filter.value = state.agendaGroupFilter
 
-  list.innerHTML = rows.length
-    ? rows.map(allGroupTripRow).join('')
-    : empty('No live rides match this group filter.')
+  list.innerHTML = `
+    ${weeklyScheduleGlance(filteredRows)}
+    <div class="schedule-detail-heading"><span class="eyebrow">UPCOMING RIDES</span><h2>Ride details</h2></div>
+    ${rows.length ? rows.map(allGroupTripRow).join('') : empty('No live rides match this group filter.')}`
+}
+
+function weeklyScheduleGlance(rows) {
+  const weekStart = agendaWeekStart(state.agendaWeekOffset)
+  const weekEnd = new Date(weekStart)
+  weekEnd.setDate(weekEnd.getDate() + 4)
+  const formatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' })
+
+  return `<section class="weekly-glance-card" aria-label="Weekly driver schedule">
+    <div class="weekly-glance-heading">
+      <div><span class="eyebrow">QUICK GLANCE</span><h2>Weekly drivers</h2><p>${formatter.format(weekStart)}–${formatter.format(weekEnd)}</p></div>
+      <div class="weekly-glance-controls" aria-label="Choose week">
+        <button data-action="weekly-schedule-previous" type="button" aria-label="Previous week">‹</button>
+        <button data-action="weekly-schedule-current" type="button">This week</button>
+        <button data-action="weekly-schedule-next" type="button" aria-label="Next week">›</button>
+      </div>
+    </div>
+    <div class="weekly-glance-grid" role="table" aria-label="Drop-off and pickup drivers by weekday">
+      <div class="weekly-glance-row weekly-glance-header" role="row">
+        <span role="columnheader">Day</span>
+        <span role="columnheader">Drop-off</span>
+        <span role="columnheader">Pickup</span>
+      </div>
+      ${[0, 1, 2, 3, 4].map(dayOffset => weeklyScheduleRow(weekStart, dayOffset, rows)).join('')}
+    </div>
+  </section>`
+}
+
+function agendaWeekStart(offset = 0) {
+  const today = new Date()
+  today.setHours(12, 0, 0, 0)
+  const day = today.getDay()
+  const daysFromMonday = day === 0 ? 6 : day - 1
+  today.setDate(today.getDate() - daysFromMonday)
+  if (day === 0 || day === 6) today.setDate(today.getDate() + 7)
+  today.setDate(today.getDate() + Number(offset || 0) * 7)
+  return today
+}
+
+function weeklyScheduleRow(weekStart, dayOffset, rows) {
+  const date = new Date(weekStart)
+  date.setDate(date.getDate() + dayOffset)
+  const dateKey = localAgendaDateKey(date)
+  const dayRows = rows.filter(item => String(item.trip_date || '').slice(0, 10) === dateKey)
+  const label = new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(date)
+  const number = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(date)
+
+  return `<div class="weekly-glance-row" role="row">
+    <div class="weekly-glance-day" role="rowheader"><strong>${label}</strong><span>${number}</span></div>
+    ${weeklyScheduleDriverCell(dayRows, 'outbound')}
+    ${weeklyScheduleDriverCell(dayRows, 'return')}
+  </div>`
+}
+
+function localAgendaDateKey(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+
+function weeklyScheduleDriverCell(dayRows, leg) {
+  const matching = dayRows.filter(item => {
+    const itemLeg = item.leg_type || (item.kind === 'afternoon_pickup' ? 'return' : 'outbound')
+    return itemLeg === leg && item.status !== 'cancelled'
+  })
+
+  if (!matching.length) return '<span class="weekly-driver-empty" role="cell">No ride</span>'
+
+  const drivers = [...new Map(matching.map(item => {
+    const driver = item.actual_driver_name || item.scheduled_driver_name || 'Unassigned'
+    return [`${item.group_id}:${driver}`, { ...item, driver }]
+  })).values()]
+
+  return `<div class="weekly-driver-cell" role="cell">${drivers.map(item => `
+    <button class="weekly-driver" data-action="open-agenda-trip" data-group-id="${item.group_id}" data-trip-id="${item.trip_id}" type="button" aria-label="View ${escapeHTML(item.display_label || 'ride')} driven by ${escapeHTML(item.driver)}">
+      ${state.agendaGroupFilter === 'all' ? `<span>${escapeHTML(item.group_name)}</span>` : ''}
+      <strong>${escapeHTML(item.driver)}</strong>
+    </button>`).join('')}</div>`
 }
 
 function allGroupTripRow(trip) {
@@ -226,6 +309,16 @@ document.addEventListener('change', event => {
 })
 
 document.addEventListener('click', async event => {
+  const weekAction = event.target.closest('[data-action^="weekly-schedule-"]')?.dataset.action
+  if (weekAction) {
+    event.preventDefault()
+    if (weekAction === 'weekly-schedule-previous') state.agendaWeekOffset -= 1
+    if (weekAction === 'weekly-schedule-next') state.agendaWeekOffset += 1
+    if (weekAction === 'weekly-schedule-current') state.agendaWeekOffset = 0
+    renderSchedule()
+    return
+  }
+
   const primary = event.target.closest('[data-kcp-primary-nav]')
   if (primary) {
     event.preventDefault()
