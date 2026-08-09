@@ -37,18 +37,16 @@ begin
     delete from public.kcp_groups where code = 'BASIS1';
 
     insert into public.kcp_groups(
-        code, name, group_kind, school_name, academic_year, timezone)
-    values ('BASIS1', 'BASIS Phoenix Primary Carpool', 'school',
+        code, name, group_kind, school_key, school_name, academic_year, timezone)
+    values ('BASIS1', 'BASIS Phoenix Primary Carpool', 'school', 'basis_phoenix_primary',
             'BASIS Phoenix Primary', '2026-27', 'America/Phoenix')
     returning id into v_group;
 
     -- ---- participants (roster pre-seeded; each is claimed via invitation) --
     foreach v_name in array v_parents loop
         insert into public.kcp_group_participants(
-            group_id, display_name, role, status, source, can_drive)
-        values (v_group, v_name,
-                case when v_name = 'Kiran' then 'owner' else 'parent' end,
-                'active', 'seed', true)
+            group_id, display_name, status, source, can_drive)
+        values (v_group, v_name, 'active', 'roster', true)
         returning id into strict v_policy;      -- reuse as scratch
         v_pid := v_pid || v_policy;
     end loop;
@@ -57,8 +55,9 @@ begin
 
     -- ---- authoritative school calendar ------------------------------------
     insert into public.kcp_school_calendars(
-        group_id, school_key, academic_year, source_sha256)
-    values (v_group, 'basis_phoenix_primary', '2026-27',
+        group_id, school_key, school_name, academic_year, source_name, source_sha256)
+    values (v_group, 'basis_phoenix_primary', 'BASIS Phoenix Primary', '2026-27',
+            'BASIS Phoenix Primary 2026-27 calendar',
             '3a5ffb0feda17ce6a0a7655b3d6d2a9c21cbb3c473df1adcc1c8dc81ba170464')
     returning id into v_cal;
 

@@ -8,7 +8,7 @@ const roleGuard = fs.readFileSync('web/app.parts/16-role-action-guard.js', 'utf8
 const stateSync = fs.readFileSync('web/app.parts/17-database-state-sync.js', 'utf8')
 const index = fs.readFileSync('web/index.html', 'utf8')
 const builder = fs.readFileSync('web/build-runtime.mjs', 'utf8')
-const serviceWorker = fs.readFileSync('web/service-worker.js', 'utf8')
+const serviceWorker = fs.readFileSync('web/service-worker-v24.js', 'utf8')
 
 test('group, destination, term, member, child and trip labels are read from state/DB fields', () => {
   assert.match(ui, /state\.activeGroup/)
@@ -83,6 +83,6 @@ test('production HTML contains neutral empty inputs rather than real pilot ident
 })
 
 test('Pages uses the runtime builder and installed apps receive the DB-driven cache', () => {
-  assert.match(builder, /Production runtime still contains pilot data/)
-  assert.match(serviceWorker, /v9-database-driven-ui/)
+  assert.match(builder, /Production runtime still contains private or infrastructure-facing data/)
+  assert.match(serviceWorker, /v24-offline-accessibility/)
 })

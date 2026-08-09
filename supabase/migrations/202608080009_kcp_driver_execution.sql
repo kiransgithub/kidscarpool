@@ -75,7 +75,7 @@ begin
         'group', jsonb_build_object(
             'id', group_record.id,
             'name', group_record.name,
-            'destination', coalesce(group_record.destination_name, group_record.school_name),
+            'destination', group_record.school_name,
             'timezone', group_record.timezone,
             'safetyRequired', group_record.safety_profiles_required
         ),

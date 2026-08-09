@@ -4,7 +4,7 @@ import fs from 'node:fs'
 
 const source = fs.readFileSync('web/app.parts/25-trip-scoped-roster.js', 'utf8')
 const migration = fs.readFileSync('supabase/migrations/202608080006_kcp_trip_scoped_roster_privacy.sql', 'utf8')
-const worker = fs.readFileSync('web/service-worker.js', 'utf8')
+const worker = fs.readFileSync('web/service-worker-v24.js', 'utf8')
 
 test('trip loading uses a role-aware RPC instead of broad table select', () => {
   assert.match(source, /table !== 'kcp_trips'/)
@@ -36,6 +36,6 @@ test('operational roster offers navigation and emergency actions without renderi
 })
 
 test('installed app refreshes privacy-scoped roster assets', () => {
-  assert.match(worker, /v17-trip-roster-privacy/)
+  assert.match(worker, /v24-offline-accessibility/)
   assert.match(worker, /\.\/trip-roster\.css/)
 })

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 
 const source = fs.readFileSync('web/app.parts/30-push-notifications.js', 'utf8')
-const worker = fs.readFileSync('web/service-worker.js', 'utf8')
+const worker = fs.readFileSync('web/service-worker-v24.js', 'utf8')
 const migration = fs.readFileSync('supabase/migrations/202608080012_kcp_web_push_notifications.sql', 'utf8')
 const dispatcher = fs.readFileSync('supabase/functions/send-notifications/index.ts', 'utf8')
 
@@ -33,7 +33,7 @@ test('service worker displays notifications and routes clicks into the app', () 
   assert.match(worker, /showNotification/)
   assert.match(worker, /addEventListener\('notificationclick'/)
   assert.match(worker, /clients\.openWindow/)
-  assert.match(worker, /v22-web-push/)
+  assert.match(worker, /v24-offline-accessibility/)
 })
 
 test('dispatcher requires a secret and revokes gone subscriptions', () => {

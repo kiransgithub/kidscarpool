@@ -46,7 +46,13 @@ begin
         values (v_owner, 'Kiran') on conflict do nothing;
     update public.kcp_group_participants
        set user_id = v_owner
-     where group_id = v_group and role = 'owner';
+     where group_id = v_group and display_name = 'Kiran';
+    insert into public.kcp_memberships(
+        group_id, user_id, parent_name, child_name, role, status, joined_at
+    ) values (
+        v_group, v_owner, 'Kiran', null, 'owner', 'active', now()
+    ) on conflict (group_id, user_id) do update
+       set role = 'owner', status = 'active', joined_at = coalesce(public.kcp_memberships.joined_at, now());
     perform auth.become(v_owner);
 
     create temp table expected_rows on commit drop as

@@ -219,8 +219,8 @@ begin
         group_row.code,
         group_row.name,
         group_row.group_kind,
-        coalesce(group_row.destination_name, group_row.school_name),
-        coalesce(group_row.term_label, group_row.academic_year),
+        group_row.school_name,
+        group_row.academic_year,
         group_row.status,
         owner_member.parent_name,
         (select count(*) from public.kcp_memberships member
@@ -251,7 +251,7 @@ begin
        or trim(p_search) = ''
        or group_row.name ilike '%' || trim(p_search) || '%'
        or group_row.code ilike '%' || trim(p_search) || '%'
-       or coalesce(group_row.destination_name, group_row.school_name, '') ilike '%' || trim(p_search) || '%'
+       or coalesce(group_row.school_name, '') ilike '%' || trim(p_search) || '%'
     order by last_activity_at desc
     limit least(greatest(p_limit, 1), 200)
     offset greatest(p_offset, 0);

@@ -138,7 +138,7 @@ with trip as (
         scheduled_driver_id, scheduled_driver_name, status, scheduled_time,
         time_label, child_names, started_at, started_source, completion_due_at
     )
-    select group_id, 1, current_date, 'afternoon_pickup', 'return', 'Admin resolution ride',
+    select group_id, 2, current_date, 'afternoon_pickup', 'return', 'Admin resolution ride',
            '77111111-1111-4111-8111-111111111111'::uuid, 'Trip State Driver',
            'completion_due', now() - interval '30 minutes', 'Past', array['Rider']::text[],
            now() - interval '20 minutes', 'manual', now() - interval '5 minutes'

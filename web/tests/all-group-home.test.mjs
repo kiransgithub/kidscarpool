@@ -5,7 +5,7 @@ import fs from 'node:fs'
 const source = fs.readFileSync('web/app.parts/21-all-group-home-navigation.js', 'utf8')
 const styles = fs.readFileSync('web/all-group-home.css', 'utf8')
 const migration = fs.readFileSync('supabase/migrations/202608080003_kcp_all_group_agenda_requests.sql', 'utf8')
-const worker = fs.readFileSync('web/service-worker.js', 'utf8')
+const worker = fs.readFileSync('web/service-worker-v24.js', 'utf8')
 
 test('primary navigation contains exactly five consumer destinations', () => {
   assert.match(source, /Home/)
@@ -43,6 +43,6 @@ test('administrative utilities move behind More rather than primary tabs', () =>
 })
 
 test('installed app refreshes the all-group experience', () => {
-  assert.match(worker, /v13-all-group-home/)
+  assert.match(worker, /v24-offline-accessibility/)
   assert.match(worker, /\.\/all-group-home\.css/)
 })

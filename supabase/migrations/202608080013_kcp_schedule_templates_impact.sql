@@ -165,6 +165,23 @@ begin
 end;
 $$;
 
+do $$
+begin
+    create type public.kcp_schedule_change_compare_row as (
+        trip_date date,
+        leg_type text,
+        old_trip_id uuid,
+        old_time timestamptz,
+        new_time timestamptz,
+        old_participant_id uuid,
+        new_participant_id uuid,
+        impact_type text,
+        display_label text
+    );
+exception when duplicate_object then null;
+end;
+$$;
+
 create or replace function public.kcp_prepare_schedule_change(
     p_plan_id uuid,
     p_reason text default 'Schedule update preview'
@@ -180,6 +197,7 @@ declare
     set_id uuid;
     summary_value jsonb;
     requires_ack boolean;
+    compare_rows public.kcp_schedule_change_compare_row[];
 begin
     select * into plan from public.kcp_schedule_plans where id = p_plan_id for update;
     if not found then raise exception 'Schedule plan not found'; end if;
@@ -191,18 +209,30 @@ begin
        set status = 'superseded'
      where plan_id = plan.id and created_by = auth.uid() and status = 'previewed';
 
-    create temporary table tmp_kcp_change_compare on commit drop as
+    select coalesce(array_agg(row(
+        comparison.trip_date,
+        comparison.leg_type,
+        comparison.old_trip_id,
+        comparison.old_time,
+        comparison.new_time,
+        comparison.old_participant_id,
+        comparison.new_participant_id,
+        comparison.impact_type,
+        comparison.display_label
+    )::public.kcp_schedule_change_compare_row), array[]::public.kcp_schedule_change_compare_row[])
+    into compare_rows
+    from (
     with occurrence_json as (
         select to_jsonb(occurrence) as item
         from public.kcp_plan_occurrences(plan.id, plan.starts_on, plan.ends_on, 10000) occurrence
     ), candidate_base as (
         select
-            (item->>'actual_date')::date as trip_date,
+            (item->>'service_date')::date as trip_date,
             item->>'leg_type' as leg_type,
             item->>'display_label' as display_label,
             item->>'session_name' as session_name,
             nullif(item->>'participant_id','')::uuid as participant_id,
-            ((item->>'actual_date')::date::text || ' ' || (item->>'local_time'))::timestamp at time zone plan.timezone as scheduled_time
+            (item->>'scheduled_at')::timestamptz as scheduled_time
         from occurrence_json
     ), candidates as (
         select candidate_base.*,
@@ -250,7 +280,8 @@ begin
     full join current_rows current_row
       on current_row.trip_date = candidate.trip_date
      and current_row.leg_type = candidate.leg_type
-     and current_row.ordinal = candidate.ordinal;
+     and current_row.ordinal = candidate.ordinal
+    ) comparison;
 
     insert into public.kcp_schedule_change_sets(
         group_id, plan_id, from_schedule_version, status, reason, created_by
@@ -269,7 +300,7 @@ begin
            compare.old_participant_id, compare.new_participant_id,
            coalesce(new_participant.user_id, old_participant.user_id),
            jsonb_build_object('label', compare.display_label)
-    from tmp_kcp_change_compare compare
+    from unnest(compare_rows) compare
     left join public.kcp_group_participants old_participant on old_participant.id = compare.old_participant_id
     left join public.kcp_group_participants new_participant on new_participant.id = compare.new_participant_id
     where compare.impact_type <> 'unchanged';
@@ -289,7 +320,7 @@ begin
                'conflictLabel', coalesce(other_trip.display_label, 'Ride'),
                'conflictTime', other_trip.scheduled_time
            )
-    from tmp_kcp_change_compare compare
+    from unnest(compare_rows) compare
     join public.kcp_group_participants participant on participant.id = compare.new_participant_id
     join public.kcp_trips other_trip
       on coalesce(other_trip.actual_driver_id, other_trip.scheduled_driver_id) = participant.user_id
@@ -311,14 +342,14 @@ begin
       );
 
     select jsonb_build_object(
-        'totalCandidateRides', (select count(*) from tmp_kcp_change_compare where new_time is not null),
-        'added', (select count(*) from public.kcp_schedule_change_impacts where change_set_id = set_id and impact_type = 'added'),
-        'removed', (select count(*) from public.kcp_schedule_change_impacts where change_set_id = set_id and impact_type = 'removed'),
-        'timeChanged', (select count(*) from public.kcp_schedule_change_impacts where change_set_id = set_id and impact_type = 'time_changed'),
-        'driverChanged', (select count(*) from public.kcp_schedule_change_impacts where change_set_id = set_id and impact_type = 'driver_changed'),
-        'conflicts', (select count(*) from public.kcp_schedule_change_impacts where change_set_id = set_id and impact_type = 'cross_group_conflict'),
-        'affectedUsers', (select count(distinct affected_user_id) from public.kcp_schedule_change_impacts where change_set_id = set_id and affected_user_id is not null),
-        'urgentImpacts', (select count(*) from public.kcp_schedule_change_impacts where change_set_id = set_id and coalesce(new_time, old_time) <= now() + interval '24 hours')
+        'totalCandidateRides', (select count(*) from unnest(compare_rows) compare where compare.new_time is not null),
+        'added', (select count(*) from public.kcp_schedule_change_impacts impact where impact.change_set_id = set_id and impact.impact_type = 'added'),
+        'removed', (select count(*) from public.kcp_schedule_change_impacts impact where impact.change_set_id = set_id and impact.impact_type = 'removed'),
+        'timeChanged', (select count(*) from public.kcp_schedule_change_impacts impact where impact.change_set_id = set_id and impact.impact_type = 'time_changed'),
+        'driverChanged', (select count(*) from public.kcp_schedule_change_impacts impact where impact.change_set_id = set_id and impact.impact_type = 'driver_changed'),
+        'conflicts', (select count(*) from public.kcp_schedule_change_impacts impact where impact.change_set_id = set_id and impact.impact_type = 'cross_group_conflict'),
+        'affectedUsers', (select count(distinct impact.affected_user_id) from public.kcp_schedule_change_impacts impact where impact.change_set_id = set_id and impact.affected_user_id is not null),
+        'urgentImpacts', (select count(*) from public.kcp_schedule_change_impacts impact where impact.change_set_id = set_id and coalesce(impact.new_time, impact.old_time) <= now() + interval '24 hours')
     ) into summary_value;
 
     requires_ack := coalesce((summary_value->>'urgentImpacts')::integer, 0) > 0;

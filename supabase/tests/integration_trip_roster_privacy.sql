@@ -17,6 +17,7 @@ values
 
 select auth.become('76111111-1111-4111-8111-111111111111'::uuid);
 create temporary table privacy_fixture(group_id uuid, owner_child uuid, driver_child uuid, driver_token text, viewer_token text, trip_id uuid);
+grant select on privacy_fixture to authenticated;
 insert into privacy_fixture(group_id)
 select created.group_id
 from public.kcp_create_group_v3(

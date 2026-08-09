@@ -4,7 +4,7 @@ import fs from 'node:fs'
 
 const source = fs.readFileSync('web/app.parts/28-child-absence.js', 'utf8')
 const migration = fs.readFileSync('supabase/migrations/202608080010_kcp_child_absence_reports.sql', 'utf8')
-const worker = fs.readFileSync('web/service-worker.js', 'utf8')
+const worker = fs.readFileSync('web/service-worker-v24.js', 'utf8')
 
 test('parent can report one ride or a date range with common absence reasons', () => {
   assert.match(source, /Report child unavailable/)
@@ -34,6 +34,6 @@ test('Viewer portfolio does not receive the absence reporting quick action', () 
 })
 
 test('installed app refreshes child absence assets', () => {
-  assert.match(worker, /v20-child-absence/)
+  assert.match(worker, /v24-offline-accessibility/)
   assert.match(worker, /\.\/child-absence\.css/)
 })

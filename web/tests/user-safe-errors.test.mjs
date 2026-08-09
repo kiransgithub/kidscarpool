@@ -4,7 +4,7 @@ import fs from 'node:fs'
 
 const source = fs.readFileSync('web/app.parts/20-user-safe-errors.js', 'utf8')
 const builder = fs.readFileSync('web/build-runtime.mjs', 'utf8')
-const worker = fs.readFileSync('web/service-worker.js', 'utf8')
+const worker = fs.readFileSync('web/service-worker-v24.js', 'utf8')
 
 test('family connectivity uses generic online, syncing and offline language', () => {
   assert.match(source, /Online · synced just now/)
@@ -29,5 +29,5 @@ test('known validation and permission errors remain actionable', () => {
 })
 
 test('installed app refreshes user-safe error handling', () => {
-  assert.match(worker, /v12-user-safe-status/)
+  assert.match(worker, /v24-offline-accessibility/)
 })

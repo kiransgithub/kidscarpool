@@ -4,15 +4,22 @@
 
 begin;
 
--- Create two disposable profile identities without coupling this test to a
--- particular GoTrue auth.users schema version. The profile FK is an internal
--- trigger, so replica mode is used only for these two test rows.
-set local session_replication_role = replica;
+-- Notification recipients are real application users, so keep the fixture
+-- consistent with the production auth/profile relationship.
+insert into auth.users(
+    id, aud, role, email, email_confirmed_at,
+    raw_app_meta_data, raw_user_meta_data, created_at, updated_at, is_anonymous
+)
+values
+    ('11111111-1111-4111-8111-111111111111'::uuid, 'authenticated', 'authenticated',
+     'owner.lifecycle@example.com', now(), '{}'::jsonb, '{}'::jsonb, now(), now(), false),
+    ('22222222-2222-4222-8222-222222222222'::uuid, 'authenticated', 'authenticated',
+     'volunteer.lifecycle@example.com', now(), '{}'::jsonb, '{}'::jsonb, now(), now(), false);
+
 insert into public.kcp_profiles(id, display_name, phone)
 values
     ('11111111-1111-4111-8111-111111111111'::uuid, 'Owner Tester', '6025550101'),
     ('22222222-2222-4222-8222-222222222222'::uuid, 'Volunteer Tester', '6025550102');
-set local session_replication_role = origin;
 
 do $$
 declare
@@ -142,9 +149,14 @@ begin
         raise exception 'Requester cannot determine who accepted coverage';
     end if;
 
-    -- Process the already-overdue volunteer trip. One call starts and completes
-    -- it because it is 31 minutes past schedule and this group uses 30 minutes.
-    perform public.kcp_process_trip_lifecycle(now(), v_group_id);
+    -- Safety hardening requires the active driver to confirm, start, report
+    -- arrival, and confirm completion explicitly.
+    perform public.kcp_confirm_trip(v_cover_trip);
+    perform public.kcp_start_trip(v_cover_trip);
+    update public.kcp_trips set started_at = now() - interval '4 minutes'
+     where id = v_cover_trip;
+    perform public.kcp_complete_trip(v_cover_trip);
+    perform public.kcp_confirm_trip_completion(v_cover_trip);
 
     select t.status, t.started_source, t.completed_source
       into v_status, v_started_source, v_completed_source
@@ -152,9 +164,9 @@ begin
      where t.id = v_cover_trip;
 
     if v_status <> 'completed'
-       or v_started_source <> 'automatic'
-       or v_completed_source <> 'automatic' then
-        raise exception 'Volunteer trip did not auto-progress: status %, start %, complete %',
+       or v_started_source <> 'manual'
+       or v_completed_source <> 'manual' then
+        raise exception 'Volunteer trip did not complete safely: status %, start %, complete %',
             v_status, v_started_source, v_completed_source;
     end if;
 
@@ -162,7 +174,7 @@ begin
     from public.kcp_points_ledger p
     where p.trip_id = v_cover_trip;
     if v_points <> 20 then
-        raise exception 'Volunteer auto-completion expected 20 points, found %', v_points;
+        raise exception 'Volunteer completion expected 20 points, found %', v_points;
     end if;
 
     -- Repeat for a regular assigned trip and verify idempotent 10-point award.
@@ -177,14 +189,20 @@ begin
         array['Owner Child','Volunteer Child']::text[]
     ) returning id into v_regular_trip;
 
-    perform public.kcp_process_trip_lifecycle(now(), v_group_id);
-    perform public.kcp_process_trip_lifecycle(now(), v_group_id);
+    perform set_config('request.jwt.claim.sub', v_owner::text, true);
+    perform public.kcp_confirm_trip(v_regular_trip);
+    perform public.kcp_start_trip(v_regular_trip);
+    update public.kcp_trips set started_at = now() - interval '4 minutes'
+     where id = v_regular_trip;
+    perform public.kcp_complete_trip(v_regular_trip);
+    perform public.kcp_confirm_trip_completion(v_regular_trip);
+    perform public.kcp_award_confirmed_trip_points(v_regular_trip);
 
     select p.points into v_points
     from public.kcp_points_ledger p
     where p.trip_id = v_regular_trip;
     if v_points <> 10 then
-        raise exception 'Regular auto-completion expected 10 points, found %', v_points;
+        raise exception 'Regular completion expected 10 points, found %', v_points;
     end if;
 
     if (select count(*) from public.kcp_points_ledger where trip_id = v_regular_trip) <> 1 then
@@ -195,14 +213,14 @@ begin
         select 1
         from public.kcp_audit_events a
         where a.group_id = v_group_id
-          and a.action = 'trip_auto_completed'
+          and a.action = 'trip_completion_confirmed'
           and a.entity_id = v_cover_trip::text
     ) then
-        raise exception 'Automatic completion was not recorded in the audit trail';
+        raise exception 'Confirmed completion was not recorded in the audit trail';
     end if;
 end;
 $$;
 
 rollback;
 
-select 'PASS: generic group, optional calendar, cover identity, automatic lifecycle and points verified' as result;
+select 'PASS: generic group, optional calendar, cover identity, safe lifecycle and points verified' as result;
