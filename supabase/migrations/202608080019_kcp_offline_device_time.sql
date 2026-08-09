@@ -1,5 +1,11 @@
 begin;
 
+alter table public.kcp_trips
+    drop constraint if exists kcp_trips_started_source_check;
+alter table public.kcp_trips
+    add constraint kcp_trips_started_source_check
+    check (started_source is null or started_source in ('manual','admin','legacy_automatic','offline'));
+
 create or replace function public.kcp_start_trip_with_device_time(
     p_trip_id uuid,
     p_device_timestamp timestamptz
