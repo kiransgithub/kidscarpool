@@ -36,18 +36,34 @@ test('after the morning trip, the afternoon pickup becomes the nearest upcoming 
   assert.deepEqual(orderTripsByProximity(input, now).map(item => item.id), ['pickup', 'drop'])
 })
 
-test('start gate opens exactly ten minutes before and closes after ninety minutes', () => {
-  const t = trip('drop', '2026-08-10T07:00:00-07:00')
-  assert.equal(tripStartGate(t, new Date('2026-08-10T06:49:59-07:00')).allowed, false)
-  assert.equal(tripStartGate(t, new Date('2026-08-10T06:50:00-07:00')).allowed, true)
-  assert.equal(tripStartGate(t, new Date('2026-08-10T08:30:00-07:00')).allowed, true)
-  assert.equal(tripStartGate(t, new Date('2026-08-10T08:30:01-07:00')).allowed, false)
+test('start gate requires ready state, opens ten minutes before and closes after ninety minutes', () => {
+  const unconfirmed = trip('drop', '2026-08-10T07:00:00-07:00', 'morning_drop', 'scheduled')
+  assert.equal(tripStartGate(unconfirmed, new Date('2026-08-10T06:55:00-07:00')).allowed, false)
+  assert.match(tripStartGate(unconfirmed, new Date('2026-08-10T06:55:00-07:00')).reason, /Confirm the ride/)
+
+  const ready = trip('drop', '2026-08-10T07:00:00-07:00', 'morning_drop', 'ready')
+  assert.equal(tripStartGate(ready, new Date('2026-08-10T06:49:59-07:00')).allowed, false)
+  assert.equal(tripStartGate(ready, new Date('2026-08-10T06:50:00-07:00')).allowed, true)
+  assert.equal(tripStartGate(ready, new Date('2026-08-10T08:30:00-07:00')).allowed, true)
+  assert.equal(tripStartGate(ready, new Date('2026-08-10T08:30:01-07:00')).allowed, false)
+})
+
+test('confirmation and completion-due states remain actionable', () => {
+  const now = new Date('2026-08-10T08:00:00-07:00')
+  const input = [
+    trip('confirmation', '2026-08-10T07:00:00-07:00', 'morning_drop', 'confirmation_due'),
+    trip('completion', '2026-08-10T06:30:00-07:00', 'morning_drop', 'completion_due'),
+    trip('later', '2026-08-10T10:00:00-07:00')
+  ]
+  const ids = upcomingActionableTrips(input, now).map(item => item.id)
+  assert.ok(ids.includes('completion'))
+  assert.ok(ids.includes('later'))
 })
 
 test('accepted cover identifies the accepting driver', () => {
   const requests = [{ id: 'r1', trip_id: 't1', status: 'accepted', accepted_by: 'u2' }]
-  const memberships = [{ user_id: 'u2', parent_name: 'Mohan' }]
+  const memberships = [{ user_id: 'u2', parent_name: 'Driver B' }]
   const request = acceptedCoverForTrip(requests, 't1')
   assert.equal(request.id, 'r1')
-  assert.equal(coverAcceptedLabel(request, memberships), 'Accepted by Mohan')
+  assert.equal(coverAcceptedLabel(request, memberships), 'Accepted by Driver B')
 })

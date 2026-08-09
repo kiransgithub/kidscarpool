@@ -3,7 +3,11 @@ const ACTIVE_STATUSES = new Set([
   'coverage_needed',
   'cover_requested',
   'cover_accepted',
-  'in_progress'
+  'confirmation_due',
+  'ready',
+  'in_progress',
+  'completion_due',
+  'unconfirmed'
 ])
 
 export function tripMoment(trip) {
@@ -14,9 +18,7 @@ export function tripMoment(trip) {
 
   const date = String(trip?.trip_date || '').slice(0, 10)
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return new Date(8640000000000000)
-
-  const fallback = trip?.kind === 'morning_drop' ? '07:00:00' : '15:35:00'
-  return new Date(`${date}T${fallback}`)
+  return new Date(`${date}T12:00:00`)
 }
 
 export function orderTripsByProximity(trips, now = new Date()) {
@@ -42,16 +44,17 @@ export function upcomingActionableTrips(trips, now = new Date()) {
   const nowMs = now.getTime()
   return orderTripsByProximity(trips, now).filter(trip => {
     const moment = tripMoment(trip).getTime()
-    return ACTIVE_STATUSES.has(trip.status) && (trip.status === 'in_progress' || moment >= nowMs)
+    return ACTIVE_STATUSES.has(trip.status)
+      && (['in_progress', 'completion_due', 'unconfirmed'].includes(trip.status) || moment >= nowMs)
   })
 }
 
 export function tripStartGate(trip, now = new Date(), leadMinutes = 10, lateMinutes = 90) {
-  if (!trip || !['scheduled', 'cover_accepted'].includes(trip.status)) {
-    return { allowed: false, reason: 'Trip is not ready to start.' }
+  if (!trip || trip.status !== 'ready') {
+    return { allowed: false, reason: 'Confirm the ride before starting it.' }
   }
   if (!trip.scheduled_time) {
-    return { allowed: false, reason: 'Confirm the trip time before starting.' }
+    return { allowed: false, reason: 'Confirm the ride time before starting.' }
   }
 
   const scheduled = tripMoment(trip)
@@ -63,7 +66,7 @@ export function tripStartGate(trip, now = new Date(), leadMinutes = 10, lateMinu
     const minutes = Math.max(1, Math.ceil((diffMs - earliestMs) / 60000))
     return {
       allowed: false,
-      reason: `Start opens in ${minutes} minute${minutes === 1 ? '' : 's'} (10 minutes before the trip).`
+      reason: `Start opens in ${minutes} minute${minutes === 1 ? '' : 's'} (10 minutes before the ride).`
     }
   }
   if (diffMs < latestMs) {
@@ -92,19 +95,19 @@ export function recoveryErrorMessage(error) {
     : String(error?.message || error || '').trim()
 
   if (/invalid, expired, or already used/i.test(raw)) {
-    return 'This recovery code is invalid, expired, or already used. Issue a new one-time code in Supabase and try again.'
+    return 'This recovery code is invalid, expired, or already used. Ask the platform administrator for a new one-time code.'
   }
   if (/current account already has an active membership/i.test(raw)) {
     return 'This device already has active access to the group. Close this window and refresh Groups.'
   }
   if (/current parent profile does not match/i.test(raw)) {
-    return 'The parent name does not match the roster entry. Use the exact invited or roster name.'
+    return 'The member name does not match the roster entry. Use the exact invited or roster name.'
   }
   if (/authentication required|complete the parent profile/i.test(raw)) {
-    return 'The pilot session is not ready. Reload the app once, then retry recovery.'
+    return 'The account session is not ready. Reload the app once, then retry recovery.'
   }
   if (/failed to fetch|network|load failed/i.test(raw)) {
-    return 'KCP could not reach Supabase. Check the connection and retry; the recovery code is not consumed unless the server accepts it.'
+    return 'KCP could not reach the service. Check the connection and retry; the recovery code is not consumed unless the server accepts it.'
   }
   return raw || 'Group recovery did not complete. Retry with a new one-time code.'
 }
@@ -121,9 +124,6 @@ export function resolveRecoveryAttempt({ rpcData = null, rpcError = null, status
     }
   }
 
-  // A network/client step can fail after PostgreSQL has already committed the
-  // one-time transfer. Treat the current-user roster state as an idempotent
-  // success so a consumed recovery code does not strand the user in the modal.
   if (status?.claim_state === 'current_user' && status?.group_id) {
     return {
       ok: true,
@@ -143,7 +143,7 @@ export function resolveRecoveryAttempt({ rpcData = null, rpcError = null, status
 }
 
 function tripBucket(trip, momentMs, nowMs) {
-  if (trip?.status === 'in_progress') return 0
+  if (['in_progress', 'completion_due'].includes(trip?.status)) return 0
   if (momentMs >= nowMs && !['completed', 'cancelled'].includes(trip?.status)) return 1
   if (!['completed', 'cancelled'].includes(trip?.status)) return 2
   return 3
