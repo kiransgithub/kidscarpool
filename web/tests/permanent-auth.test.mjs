@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 
 const source = fs.readFileSync('web/app.parts/18-permanent-auth.js', 'utf8')
-const worker = fs.readFileSync('web/service-worker.js', 'utf8')
+const worker = fs.readFileSync('web/service-worker-v24.js', 'utf8')
 const migration = fs.readFileSync('supabase/migrations/202608080001_kcp_permanent_identity_devices.sql', 'utf8')
 
 test('anonymous users can link a verified email without replacing their user id', () => {
@@ -29,6 +29,6 @@ test('device registry is user-scoped and supports removal', () => {
 })
 
 test('installed app refreshes permanent account assets', () => {
-  assert.match(worker, /v10-permanent-account/)
+  assert.match(worker, /v24-offline-accessibility/)
   assert.match(worker, /\.\/account-auth\.css/)
 })

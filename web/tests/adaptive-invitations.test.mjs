@@ -4,7 +4,7 @@ import fs from 'node:fs'
 
 const source = fs.readFileSync('web/app.parts/23-adaptive-invitations.js', 'utf8')
 const migration = fs.readFileSync('supabase/migrations/202608080004_kcp_adaptive_invitations.sql', 'utf8')
-const worker = fs.readFileSync('web/service-worker.js', 'utf8')
+const worker = fs.readFileSync('web/service-worker-v24.js', 'utf8')
 
 test('Viewer invitation needs no child and can never be assigned to drive', () => {
   assert.match(source, /role !== 'viewer'/)
@@ -35,6 +35,6 @@ test('Owner and Admin can rotate or revoke invitation codes', () => {
 })
 
 test('installed app refreshes adaptive invitation assets', () => {
-  assert.match(worker, /v15-adaptive-invitations/)
+  assert.match(worker, /v24-offline-accessibility/)
   assert.match(worker, /\.\/adaptive-invitations\.css/)
 })

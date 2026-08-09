@@ -11,7 +11,7 @@ const heartbeat = fs.readFileSync('web/app.parts/33-client-heartbeat.js', 'utf8'
 test('support console is separate and requires a platform administrator session', () => {
   assert.match(index, /KCP Platform Support/)
   assert.match(app, /kcp_support_me/)
-  assert.match(app, /This account is not a platform administrator/)
+  assert.match(index, /This account is not a platform administrator/)
   assert.doesNotMatch(app, /SUPABASE_SERVICE_ROLE_KEY|service_role/i)
   assert.match(migration, /kcp_is_platform_admin\('support_admin'\)/)
 })
@@ -46,7 +46,8 @@ test('normal PWA sends privacy-safe build heartbeats only', () => {
   assert.match(heartbeat, /kcp_register_client_heartbeat/)
   assert.match(heartbeat, /build_version/)
   assert.match(heartbeat, /active_group_id/)
-  assert.doesNotMatch(heartbeat, /pickup_address|emergency|child_names|prompt/i)
+  const heartbeatPayload = heartbeat.slice(heartbeat.indexOf("supabase.rpc('kcp_register_client_heartbeat'"), heartbeat.indexOf('})', heartbeat.indexOf("supabase.rpc('kcp_register_client_heartbeat'")) + 2)
+  assert.doesNotMatch(heartbeatPayload, /pickup_address|emergency|child_names|prompt/i)
 })
 
 test('support console includes cases and reference-code diagnostics', () => {

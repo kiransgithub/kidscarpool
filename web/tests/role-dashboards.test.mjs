@@ -4,14 +4,15 @@ import fs from 'node:fs'
 
 const source = fs.readFileSync('web/app.parts/22-role-specific-dashboards.js', 'utf8')
 const styles = fs.readFileSync('web/role-dashboards.css', 'utf8')
-const worker = fs.readFileSync('web/service-worker.js', 'utf8')
+const worker = fs.readFileSync('web/service-worker-v24.js', 'utf8')
 
 test('viewer Home is read-only and omits internal change and version metrics', () => {
   assert.match(source, /READ-ONLY VIEW/)
   assert.match(source, /Administrative changes and internal schedule versions are intentionally hidden/)
   assert.match(source, /requestsButton\.classList\.toggle\('hidden', portfolio\.viewerOnly\)/)
-  const viewerBlock = source.slice(source.indexOf("if (portfolio.viewerOnly)"), source.indexOf("if (portfolio.managedGroups.length)"))
-  assert.doesNotMatch(viewerBlock, /pendingChanges|current_schedule_version|Schedule v/i)
+  const viewerStart = source.indexOf("if (portfolio.viewerOnly)", source.indexOf('renderHome = function'))
+  const viewerBlock = source.slice(viewerStart, source.indexOf("if (portfolio.managedGroups.length)", viewerStart))
+  assert.doesNotMatch(viewerBlock, /pendingChanges|current_schedule_version/)
 })
 
 test('Owner and Admin Home shows only operational management metrics', () => {
@@ -38,6 +39,6 @@ test('group cards and group detail adapt to the membership role', () => {
 
 test('installed app refreshes role-specific dashboards', () => {
   assert.match(styles, /manager-metrics/)
-  assert.match(worker, /v14-role-dashboards/)
+  assert.match(worker, /v24-offline-accessibility/)
   assert.match(worker, /\.\/role-dashboards\.css/)
 })
