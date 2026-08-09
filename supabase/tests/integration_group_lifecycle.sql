@@ -213,7 +213,7 @@ begin
     assert (select actual_participant_id from public.kcp_trips where id = v_trip_id)
            is null, 'withdrawal must clear the volunteer';
     assert (select status from public.kcp_cover_requests where id = v_cover)
-           = 'withdrawn', 'request must be marked withdrawn';
+           = 'cancelled', 'withdrawn request must be durably marked cancelled';
 
     -- ---- exactly one active owner is enforced -----------------------------
     perform auth.become(v_owner);
