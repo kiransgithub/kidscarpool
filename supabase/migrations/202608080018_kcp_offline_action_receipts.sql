@@ -1,5 +1,15 @@
 begin;
 
+alter table public.kcp_trip_events
+    drop constraint if exists kcp_trip_events_event_type_check;
+alter table public.kcp_trip_events
+    add constraint kcp_trip_events_event_type_check check (event_type in (
+        'driver_confirmed','confirmation_due','trip_started','arrival_reported',
+        'completion_due','completion_confirmed','admin_completion_confirmed',
+        'marked_unconfirmed','child_picked_up','child_skipped','arrived_destination',
+        'issue_reported','trip_cancelled','client_action_applied'
+    ));
+
 -- ---------------------------------------------------------------------------
 -- Idempotent offline action replay
 -- ---------------------------------------------------------------------------
