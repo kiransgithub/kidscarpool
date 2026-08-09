@@ -223,6 +223,23 @@
   font-weight: 750;
 }
 
+.schedule-publish-status {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 11px 13px;
+  border-radius: 13px;
+  background: #ecfdf3;
+  color: #05603a;
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.schedule-publish-status.warning {
+  background: #fff7ed;
+  color: #9a3412;
+}
+
 @media (max-width: 560px) {
   .schedule-builder-intro {
     margin-bottom: 0;
@@ -312,4 +329,7 @@
     background: #4a2a12;
     color: #fdba74;
   }
+
+  .schedule-publish-status { background: #123d2b; color: #86efac; }
+  .schedule-publish-status.warning { background: #4a2a12; color: #fdba74; }
 }

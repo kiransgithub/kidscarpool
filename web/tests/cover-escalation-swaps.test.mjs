@@ -12,7 +12,7 @@ test('cover requests expose response deadlines and three escalation stages', () 
   assert.match(migration, /group_admin/)
   assert.match(migration, /unresolved/)
   assert.match(source, /Respond by/)
-  assert.match(source, /Coverage unresolved/)
+  assert.match(source, /No driver yet/)
 })
 
 test('escalation never silently assigns a driver', () => {
@@ -25,7 +25,7 @@ test('escalation never silently assigns a driver', () => {
 })
 
 test('swap request identifies two future rides and requires the other driver response', () => {
-  assert.match(source, /Request ride swap/)
+  assert.match(source, /Request a ride swap/)
   assert.match(source, /Ride you would take instead/)
   assert.match(source, /Accept swap/)
   assert.match(source, /Decline/)

@@ -4,6 +4,7 @@
 state.allGroupAgenda = []
 state.allGroupRequests = []
 state.agendaGroupFilter = 'all'
+state.agendaWeekOffset = 0
 
 function primaryNavIcon(name) {
   const paths = {
@@ -28,7 +29,7 @@ if (!el('requestsView')) {
     <section id="moreView" class="view hidden" data-view="more">
       <div class="section-heading"><div><span class="eyebrow">ACCOUNT + GROUP TOOLS</span><h1>More</h1></div></div>
       <div class="more-grid">
-        <button class="more-card" data-more-view="leaderboard" type="button"><span>${primaryNavIcon('points')}</span><strong>Points</strong><small>Fairness and volunteer credit</small></button>
+        <button class="more-card" data-more-view="leaderboard" type="button"><span>${primaryNavIcon('points')}</span><strong>Driving summary</strong><small>Completed, volunteer and upcoming rides</small></button>
         <button class="more-card" data-more-view="calendar" type="button"><span>${primaryNavIcon('calendar')}</span><strong>Calendar</strong><small>Closures and exception dates</small></button>
         <button class="more-card" data-more-view="settings" type="button"><span>${primaryNavIcon('settings')}</span><strong>Settings</strong><small>Profile, availability and devices</small></button>
       </div>
@@ -57,10 +58,10 @@ async function loadAllGroupFeeds() {
   }
 
   const now = new Date()
-  const from = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString()
+  const from = new Date(now.getTime() - 21 * 24 * 60 * 60 * 1000).toISOString()
   const to = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString()
   const [{ data: agenda, error: agendaError }, { data: requests, error: requestsError }] = await Promise.all([
-    supabase.rpc('kcp_my_agenda', { p_from: from, p_to: to, p_limit: 500 }),
+    supabase.rpc('kcp_my_agenda', { p_from: from, p_to: to, p_limit: 1000 }),
     supabase.rpc('kcp_my_requests', { p_limit: 300 })
   ])
 
@@ -93,8 +94,8 @@ renderHome = function () {
   ) || null
   const attention = state.allGroupRequests.filter(item => item.requires_my_action)
 
-  renderAgendaFocusCard(el('nextDropCard'), nextRide, 'NEXT RIDE', '↗')
-  renderAgendaFocusCard(el('nextPickupCard'), nextAssignment, 'YOUR NEXT ASSIGNMENT', '✓')
+  renderAgendaFocusCard(el('nextDropCard'), nextRide, 'NEXT RIDE', 'ride')
+  renderAgendaFocusCard(el('nextPickupCard'), nextAssignment, 'YOUR NEXT DRIVE', 'drive')
 
   el('homeAlerts').innerHTML = `
     <div class="group-card-head">
@@ -109,22 +110,29 @@ renderHome = function () {
     ${attention.length ? '<button class="secondary-button" data-nav="requests" type="button">View requests</button>' : `<p class="meta">${state.allGroupAgenda.length ? 'Upcoming rides from every group are shown here automatically.' : 'Create a group or accept an invitation to begin.'}</p>`}`
 }
 
-function renderAgendaFocusCard(container, trip, heading, symbol) {
-  container.className = `trip-focus-card ${heading.includes('ASSIGNMENT') ? 'pickup' : 'morning'}`
+function agendaFocusIcon(name) {
+  const paths = name === 'drive'
+    ? '<path d="M5 17h14v-5l-2-5H7l-2 5v5Z"/><path d="M6 12h12M7 17v2M17 17v2"/><circle cx="8" cy="14.5" r="1"/><circle cx="16" cy="14.5" r="1"/>'
+    : '<path d="M5 19c0-4 2-6 6-6h8"/><path d="m15 9 4 4-4 4"/><circle cx="5" cy="19" r="2"/>'
+  return `<svg class="trip-focus-icon" viewBox="0 0 24 24" aria-hidden="true">${paths}</svg>`
+}
+
+function renderAgendaFocusCard(container, trip, heading, focusIcon) {
+  container.className = `trip-focus-card ${focusIcon === 'drive' ? 'pickup' : 'morning'}`
   if (!trip) {
     container.classList.add('empty')
-    container.innerHTML = `<div class="trip-symbol">${symbol}</div><div class="trip-label">${heading}</div><h2>No upcoming ride</h2><p class="meta">Published rides from all of your groups will appear here.</p>`
+    container.innerHTML = `<div class="trip-symbol">${agendaFocusIcon(focusIcon)}</div><div class="trip-label">${heading}</div><h2>No upcoming ride</h2><p class="meta">Live rides from all of your groups will appear here.</p>`
     return
   }
 
   const driver = trip.actual_driver_name || trip.scheduled_driver_name || 'Unassigned'
   container.innerHTML = `
-    <div class="trip-symbol">${symbol}</div>
+    <div class="trip-symbol">${agendaFocusIcon(focusIcon)}</div>
     <div class="trip-label">${escapeHTML(heading)}</div>
     <span class="group-context-badge">${escapeHTML(trip.group_name)}</span>
     <div class="driver">${escapeHTML(trip.display_label || 'Ride')}</div>
     <div class="trip-time">${escapeHTML(agendaDateTime(trip))}</div>
-    <div class="meta">Driver: <strong>${escapeHTML(driver)}</strong></div>
+    <div class="trip-driver-row"><span>Driver</span><strong>${escapeHTML(driver)}</strong></div>
     ${statusPill(trip.status)}
     <div style="height:12px"></div>
     <button class="primary-button" data-action="open-agenda-trip" data-group-id="${trip.group_id}" data-trip-id="${trip.trip_id}" type="button">View ride</button>`
@@ -133,9 +141,14 @@ function renderAgendaFocusCard(container, trip, heading, symbol) {
 renderSchedule = function () {
   const list = el('scheduleList')
   const groups = [...new Map(state.allGroupAgenda.map(item => [item.group_id, item.group_name])).entries()]
-  const rows = state.allGroupAgenda
+  const filteredRows = state.allGroupAgenda
     .filter(item => state.agendaGroupFilter === 'all' || item.group_id === state.agendaGroupFilter)
+  const detailCutoff = Date.now() - 90 * 60 * 1000
+  const rows = filteredRows
     .filter(item => !['cancelled'].includes(item.status))
+    .filter(item => ['in_progress', 'cover_requested'].includes(item.status)
+      || !item.scheduled_time
+      || new Date(item.scheduled_time).getTime() >= detailCutoff)
 
   const view = el('scheduleView')
   let filter = el('allGroupScheduleFilter')
@@ -150,9 +163,86 @@ renderSchedule = function () {
     .map(([id, name]) => `<option value="${id}">${escapeHTML(name)}</option>`).join('')
   filter.value = state.agendaGroupFilter
 
-  list.innerHTML = rows.length
-    ? rows.map(allGroupTripRow).join('')
-    : empty('No published rides match this group filter.')
+  list.innerHTML = `
+    ${weeklyScheduleGlance(filteredRows)}
+    <div class="schedule-detail-heading"><span class="eyebrow">UPCOMING RIDES</span><h2>Ride details</h2></div>
+    ${rows.length ? rows.map(allGroupTripRow).join('') : empty('No live rides match this group filter.')}`
+}
+
+function weeklyScheduleGlance(rows) {
+  const weekStart = agendaWeekStart(state.agendaWeekOffset)
+  const weekEnd = new Date(weekStart)
+  weekEnd.setDate(weekEnd.getDate() + 4)
+  const formatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' })
+
+  return `<section class="weekly-glance-card" aria-label="Weekly driver schedule">
+    <div class="weekly-glance-heading">
+      <div><span class="eyebrow">QUICK GLANCE</span><h2>Weekly drivers</h2><p>${formatter.format(weekStart)}–${formatter.format(weekEnd)}</p></div>
+      <div class="weekly-glance-controls" aria-label="Choose week">
+        <button data-action="weekly-schedule-previous" type="button" aria-label="Previous week">‹</button>
+        <button data-action="weekly-schedule-current" type="button">This week</button>
+        <button data-action="weekly-schedule-next" type="button" aria-label="Next week">›</button>
+      </div>
+    </div>
+    <div class="weekly-glance-grid" role="table" aria-label="Drop-off and pickup drivers by weekday">
+      <div class="weekly-glance-row weekly-glance-header" role="row">
+        <span role="columnheader">Day</span>
+        <span role="columnheader">Drop-off</span>
+        <span role="columnheader">Pickup</span>
+      </div>
+      ${[0, 1, 2, 3, 4].map(dayOffset => agendaWeeklyScheduleRow(weekStart, dayOffset, rows)).join('')}
+    </div>
+  </section>`
+}
+
+function agendaWeekStart(offset = 0) {
+  const today = new Date()
+  today.setHours(12, 0, 0, 0)
+  const day = today.getDay()
+  const daysFromMonday = day === 0 ? 6 : day - 1
+  today.setDate(today.getDate() - daysFromMonday)
+  if (day === 0 || day === 6) today.setDate(today.getDate() + 7)
+  today.setDate(today.getDate() + Number(offset || 0) * 7)
+  return today
+}
+
+function agendaWeeklyScheduleRow(weekStart, dayOffset, rows) {
+  const date = new Date(weekStart)
+  date.setDate(date.getDate() + dayOffset)
+  const dateKey = localAgendaDateKey(date)
+  const dayRows = rows.filter(item => String(item.trip_date || '').slice(0, 10) === dateKey)
+  const label = new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(date)
+  const number = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(date)
+
+  return `<div class="weekly-glance-row" role="row">
+    <div class="weekly-glance-day" role="rowheader"><strong>${label}</strong><span>${number}</span></div>
+    ${weeklyScheduleDriverCell(dayRows, 'outbound')}
+    ${weeklyScheduleDriverCell(dayRows, 'return')}
+  </div>`
+}
+
+function localAgendaDateKey(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+
+function weeklyScheduleDriverCell(dayRows, leg) {
+  const matching = dayRows.filter(item => {
+    const itemLeg = item.leg_type || (item.kind === 'afternoon_pickup' ? 'return' : 'outbound')
+    return itemLeg === leg && item.status !== 'cancelled'
+  })
+
+  if (!matching.length) return '<span class="weekly-driver-empty" role="cell">No ride</span>'
+
+  const drivers = [...new Map(matching.map(item => {
+    const driver = item.actual_driver_name || item.scheduled_driver_name || 'Unassigned'
+    return [`${item.group_id}:${driver}`, { ...item, driver }]
+  })).values()]
+
+  return `<div class="weekly-driver-cell" role="cell">${drivers.map(item => `
+    <button class="weekly-driver" data-action="open-agenda-trip" data-group-id="${item.group_id}" data-trip-id="${item.trip_id}" type="button" aria-label="View ${escapeHTML(item.display_label || 'ride')} driven by ${escapeHTML(item.driver)}">
+      ${state.agendaGroupFilter === 'all' ? `<span>${escapeHTML(item.group_name)}</span>` : ''}
+      <strong>${escapeHTML(item.driver)}</strong>
+    </button>`).join('')}</div>`
 }
 
 function allGroupTripRow(trip) {
@@ -219,6 +309,16 @@ document.addEventListener('change', event => {
 })
 
 document.addEventListener('click', async event => {
+  const weekAction = event.target.closest('[data-action^="weekly-schedule-"]')?.dataset.action
+  if (weekAction) {
+    event.preventDefault()
+    if (weekAction === 'weekly-schedule-previous') state.agendaWeekOffset -= 1
+    if (weekAction === 'weekly-schedule-next') state.agendaWeekOffset += 1
+    if (weekAction === 'weekly-schedule-current') state.agendaWeekOffset = 0
+    renderSchedule()
+    return
+  }
+
   const primary = event.target.closest('[data-kcp-primary-nav]')
   if (primary) {
     event.preventDefault()

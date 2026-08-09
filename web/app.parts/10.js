@@ -146,7 +146,7 @@ if (genericGroupForm) {
       }
       await loadWorkspace()
       await openGenericScheduleBuilder(created.draft_plan_id)
-    }, 'Private group created; you are the Owner')
+    }, 'Private group created; you are the group owner')
   })
 }
 
@@ -156,7 +156,7 @@ if (genericGroupForm) {
 
 async function openGenericScheduleBuilder(requestedPlanId = null) {
   if (!state.activeGroup || !isAdmin()) {
-    toast('Only an Owner or Admin can configure the recurring schedule.', true)
+    toast('Only a group manager can change the weekly schedule.', true)
     return
   }
 
@@ -237,7 +237,7 @@ function renderScheduleBuilder() {
   renderScheduleSessionCards()
   renderScheduleParticipantPicker()
   renderScheduleStrategyHelp()
-  el('schedulePreview').innerHTML = '<div class="empty-card compact"><p>Review the rules, then tap <strong>Preview schedule</strong>.</p></div>'
+  el('schedulePreview').innerHTML = '<div class="empty-card compact"><p>Review the choices, then tap <strong>Check schedule</strong>.</p></div>'
 }
 
 function renderScheduleSessionCards() {
@@ -301,7 +301,7 @@ function renderScheduleParticipantPicker() {
 
   const container = el('scheduleParticipantsList')
   if (!ordered.length) {
-    container.innerHTML = '<div class="empty-card compact"><p>Invite at least one driving parent. The Owner remains available as a driver by default.</p></div>'
+    container.innerHTML = '<div class="empty-card compact"><p>Invite at least one other driver. The group owner is available as a driver by default.</p></div>'
     el('scheduleFixedParticipant').innerHTML = '<option value="">No active driver</option>'
     return
   }
@@ -439,7 +439,7 @@ el('publishSchedulePlan')?.addEventListener('click', async event => {
     await saveGenericScheduleDraft()
     const { data, error } = await supabase.rpc('kcp_publish_schedule_plan', {
       p_plan_id: activeSchedulePlanId,
-      p_reason: 'Published from the flexible schedule builder'
+      p_reason: 'Made live from the ride schedule'
     })
     if (error) throw error
 
@@ -447,7 +447,7 @@ el('publishSchedulePlan')?.addEventListener('click', async event => {
     await refreshAll()
     navigate('schedule')
     return data
-  }, 'Recurring schedule published')
+  }, 'Weekly schedule is live')
 })
 
 async function saveAndPreviewGenericSchedule() {
@@ -466,7 +466,7 @@ async function saveAndPreviewGenericSchedule() {
     })
     if (error) throw error
     renderSchedulePreview(data || [])
-  }, 'Draft saved and preview refreshed')
+  }, 'Draft saved and schedule checked')
 }
 
 async function saveGenericScheduleDraft() {
@@ -486,7 +486,7 @@ async function saveGenericScheduleDraft() {
 
   const { data, error } = await supabase.rpc('kcp_save_schedule_plan', {
     p_plan_id: activeSchedulePlanId,
-    p_name: el('schedulePlanName').value.trim() || 'Recurring schedule',
+    p_name: el('schedulePlanName').value.trim() || 'Weekly schedule',
     p_starts_on: draft.startsOn,
     p_ends_on: draft.endsOn,
     p_outbound_label: el('scheduleOutboundLabel').value.trim() || 'Drop-off',
@@ -507,7 +507,7 @@ async function saveGenericScheduleDraft() {
 function renderSchedulePreview(rows) {
   const container = el('schedulePreview')
   if (!rows.length) {
-    container.innerHTML = '<div class="empty-card compact"><p>No trips were generated. Check the dates and recurring days.</p></div>'
+    container.innerHTML = '<div class="empty-card compact"><p>No rides were created. Check the date range and selected days.</p></div>'
     return
   }
 
@@ -564,12 +564,12 @@ renderGroupAdminPanel = function () {
       <div>
         <span class="eyebrow">FLEXIBLE SCHEDULE</span>
         <h2>${escapeHTML(plan?.name || 'Not configured')}</h2>
-        <p class="meta">${plan ? `${formatDate(plan.starts_on)} – ${formatDate(plan.ends_on)} · ${state.scheduleBuilder.sessions.length} recurring ride${state.scheduleBuilder.sessions.length === 1 ? '' : 's'}` : 'Create weekday-specific rides and choose how driving rotates.'}</p>
+        <p class="meta">${plan ? `${formatDate(plan.starts_on)} – ${formatDate(plan.ends_on)} · ${state.scheduleBuilder.sessions.length} weekly ride${state.scheduleBuilder.sessions.length === 1 ? '' : 's'}` : 'Choose the ride days and how driving is shared.'}</p>
       </div>
-      <span class="status-pill ${plan?.status === 'published' ? '' : 'info'}">${escapeHTML(capitalize(plan?.status || 'draft'))}</span>
+      <span class="status-pill ${plan?.status === 'published' ? '' : 'info'}">${plan?.status === 'published' ? 'Live' : 'Not shared yet'}</span>
     </div>
-    <p class="meta">Assignment: <strong>${escapeHTML(strategyTitle(policy?.strategy || 'manual'))}</strong>. Calendar exceptions remain optional.</p>
-    ${isAdmin() ? '<button class="primary-small" data-action="open-generic-schedule-builder" type="button">Configure & preview</button>' : ''}`
+    <p class="meta">Driving plan: <strong>${escapeHTML(strategyTitle(policy?.strategy || 'manual'))}</strong>. You can make one-time date changes later.</p>
+    ${isAdmin() ? '<button class="primary-small" data-action="open-generic-schedule-builder" type="button">Edit and check schedule</button>' : ''}`
   panel.insertAdjacentElement('afterbegin', planCard)
 }
 
@@ -675,7 +675,7 @@ function defaultLegLabels(groupKind) {
 }
 
 function strategyTitle(value) {
-  return ASSIGNMENT_STRATEGIES.find(item => item.value === value)?.title || 'Assign later'
+  return ASSIGNMENT_STRATEGIES.find(item => item.value === value)?.title || 'Choose drivers later'
 }
 
 function legacyLegType(kind) {

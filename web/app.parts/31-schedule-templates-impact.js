@@ -9,6 +9,8 @@ let activeScheduleChangeSetId = null
 let activeScheduleImpact = null
 let scheduleImpactDirty = true
 
+window.kcpScheduleImpactReady = () => Boolean(activeScheduleChangeSetId && activeScheduleImpact && !scheduleImpactDirty)
+
 const kcpImpactPreviousLoadAllGroupFeeds = loadAllGroupFeeds
 loadAllGroupFeeds = async function () {
   await kcpImpactPreviousLoadAllGroupFeeds()
@@ -267,23 +269,45 @@ saveAndPreviewGenericSchedule = async function () {
     if (occurrenceError) throw occurrenceError
     renderSchedulePreview(occurrences || [])
 
-    const { data: prepared, error: prepareError } = await supabase.rpc('kcp_prepare_schedule_change', {
-      p_plan_id: activeSchedulePlanId,
-      p_reason: 'Previewed from the recurring schedule builder'
-    })
-    if (prepareError) throw prepareError
-    const row = prepared?.[0]
-    if (!row?.change_set_id) throw new Error('Schedule impact preview did not return an identifier')
+    try {
+      const { data: prepared, error: prepareError } = await supabase.rpc('kcp_prepare_schedule_change', {
+        p_plan_id: activeSchedulePlanId,
+        p_reason: 'Checked from the weekly ride schedule'
+      })
+      if (prepareError) throw prepareError
+      const row = prepared?.[0]
+      if (!row?.change_set_id) throw new Error('The final schedule check did not finish')
 
-    activeScheduleChangeSetId = row.change_set_id
-    const { data: details, error: detailError } = await supabase.rpc('kcp_schedule_change_details', {
-      p_change_set_id: activeScheduleChangeSetId
-    })
-    if (detailError) throw detailError
-    activeScheduleImpact = details || { summary: row.summary, impacts: [] }
-    scheduleImpactDirty = false
-    renderScheduleImpactSummary()
-  }, 'Preview and impact review refreshed', { operation: 'preview_schedule_impact' })
+      activeScheduleChangeSetId = row.change_set_id
+      const { data: details, error: detailError } = await supabase.rpc('kcp_schedule_change_details', {
+        p_change_set_id: activeScheduleChangeSetId
+      })
+      if (detailError) throw detailError
+      activeScheduleImpact = details || { summary: row.summary, impacts: [] }
+      scheduleImpactDirty = false
+      renderScheduleImpactSummary()
+    } catch (error) {
+      activeScheduleChangeSetId = null
+      activeScheduleImpact = null
+      scheduleImpactDirty = true
+      renderScheduleImpactUnavailable()
+      console.warn('KCP final schedule check:', error.message || error)
+    }
+  }, 'Schedule checked and draft saved', { operation: 'preview_schedule_impact' })
+}
+
+function renderScheduleImpactUnavailable() {
+  const preview = el('schedulePreview')
+  if (!preview) return
+  preview.querySelector('#scheduleImpactSummary')?.remove()
+  preview.insertAdjacentHTML('beforeend', `
+    <section id="scheduleImpactSummary" class="schedule-impact-summary has-conflicts">
+      <div class="group-card-head">
+        <div><span class="eyebrow">FINAL CHECK</span><h3>The rides are ready to view</h3></div>
+        <span class="status-pill warning">Try again</span>
+      </div>
+      <p>The draft was saved, but KCP could not finish checking notifications and overlapping rides. Tap <strong>Check again</strong> before making the schedule live.</p>
+    </section>`)
 }
 
 const kcpImpactPreviousRenderCurrentPreviewWeek = typeof renderCurrentPreviewWeek === 'function'
@@ -311,8 +335,8 @@ function renderScheduleImpactSummary() {
   preview.insertAdjacentHTML('beforeend', `
     <section id="scheduleImpactSummary" class="schedule-impact-summary ${conflicts.length ? 'has-conflicts' : ''}">
       <div class="group-card-head">
-        <div><span class="eyebrow">PUBLISH IMPACT</span><h3>${changed || conflicts.length ? 'Review the affected rides' : 'No operational differences detected'}</h3></div>
-        <span class="status-pill ${conflicts.length ? 'danger' : activeScheduleImpact.requires_acknowledgement ? 'warning' : 'complete'}">${conflicts.length ? `${conflicts.length} conflict${conflicts.length === 1 ? '' : 's'}` : activeScheduleImpact.requires_acknowledgement ? 'Acknowledgement needed' : 'Ready'}</span>
+        <div><span class="eyebrow">CHANGES TO REVIEW</span><h3>${changed || conflicts.length ? 'Review the rides that will change' : 'No rides will change'}</h3></div>
+        <span class="status-pill ${conflicts.length ? 'danger' : activeScheduleImpact.requires_acknowledgement ? 'warning' : 'complete'}">${conflicts.length ? `${conflicts.length} overlap${conflicts.length === 1 ? '' : 's'}` : activeScheduleImpact.requires_acknowledgement ? 'Driver confirmation needed' : 'Ready'}</span>
       </div>
       <div class="impact-metric-grid">
         ${impactMetric(summary.totalCandidateRides, 'Future rides')}
@@ -320,14 +344,14 @@ function renderScheduleImpactSummary() {
         ${impactMetric(summary.removed, 'Removed')}
         ${impactMetric(summary.timeChanged, 'Time changes')}
         ${impactMetric(summary.driverChanged, 'Driver changes')}
-        ${impactMetric(summary.affectedUsers, 'Affected people')}
+        ${impactMetric(summary.affectedUsers, 'People notified')}
       </div>
-      ${activeScheduleImpact.requires_acknowledgement ? `<div class="impact-warning"><strong>Changes within 24 hours</strong><span>${Number(summary.urgentImpacts || 0)} urgent impact${Number(summary.urgentImpacts || 0) === 1 ? '' : 's'} will request acknowledgement from affected drivers.</span></div>` : ''}
-      ${conflicts.length ? `<div class="impact-conflicts"><h4>Cross-group conflicts</h4>${conflicts.slice(0, 8).map(conflict => {
+      ${activeScheduleImpact.requires_acknowledgement ? `<div class="impact-warning"><strong>Changes within 24 hours</strong><span>${Number(summary.urgentImpacts || 0)} last-minute change${Number(summary.urgentImpacts || 0) === 1 ? '' : 's'} will ask affected drivers to confirm.</span></div>` : ''}
+      ${conflicts.length ? `<div class="impact-conflicts"><h4>Rides that overlap another group</h4>${conflicts.slice(0, 8).map(conflict => {
         const detail = conflict.details || {}
         return `<div><strong>${escapeHTML(detail.label || 'Candidate ride')}</strong><span>${conflict.new_time ? formatDateTime(conflict.new_time) : formatDate(conflict.trip_date)} overlaps ${escapeHTML(detail.conflictGroupName || 'another group')} · ${escapeHTML(detail.conflictLabel || 'ride')}</span></div>`
       }).join('')}</div>` : ''}
-      <label class="impact-reason-label">Reason for publishing <span class="optional">recommended</span>
+      <label class="impact-reason-label">Why are you changing the schedule? <span class="optional">recommended</span>
         <input id="schedulePublishReason" maxlength="240" placeholder="New term, parent availability change, corrected time…">
       </label>
     </section>`)
@@ -344,22 +368,22 @@ document.addEventListener('click', async event => {
   event.stopImmediatePropagation()
 
   if (scheduleImpactDirty || !activeScheduleChangeSetId) {
-    toast('Generate a fresh preview and impact review before publishing.', true)
+    toast('Check the latest rides before making the schedule live.', true)
     return
   }
   const pendingDrivers = (state.invitations || []).filter(invitation => invitation.status === 'pending' && invitation.can_drive)
   if (pendingDrivers.length) {
-    toast(`${pendingDrivers.length} invited driver${pendingDrivers.length === 1 ? '' : 's'} must accept or decline before publishing. You can keep previewing this draft.`, true)
+    toast(`${pendingDrivers.length} invited driver${pendingDrivers.length === 1 ? '' : 's'} must accept or decline before the schedule can be made live. You can keep checking this saved draft.`, true)
     return
   }
   const summary = activeScheduleImpact?.summary || {}
   const conflicts = Number(summary.conflicts || 0)
   const message = conflicts
-    ? `This schedule has ${conflicts} cross-group conflict${conflicts === 1 ? '' : 's'}. Publish anyway and notify affected members?`
-    : 'Publish this schedule and notify affected members?'
+    ? `This schedule has ${conflicts} ride${conflicts === 1 ? '' : 's'} that overlap another group. Make it live anyway and notify everyone affected?`
+    : 'Make this schedule live and notify everyone affected?'
   if (!confirm(message)) return
 
-  const reason = el('schedulePublishReason')?.value.trim() || 'Published after impact review'
+  const reason = el('schedulePublishReason')?.value.trim() || 'Made live after checking ride changes'
   await runAction(async () => {
     const { data, error } = await supabase.rpc('kcp_publish_schedule_plan_v3', {
       p_plan_id: activeSchedulePlanId,
@@ -374,7 +398,7 @@ document.addEventListener('click', async event => {
     await refreshAll()
     navigate('schedule')
     return data
-  }, 'Schedule published and affected members notified', { operation: 'publish_schedule_impact' })
+  }, 'Schedule is live and everyone affected was notified', { operation: 'publish_schedule_impact' })
 }, { capture: true })
 
 const kcpImpactPreviousRenderAllGroupRequests = renderAllGroupRequests
@@ -393,14 +417,14 @@ function renderScheduleAcknowledgements() {
 
   list.insertAdjacentHTML('afterbegin', `
     <section class="request-section" data-schedule-ack>
-      <div class="request-section-heading"><span class="eyebrow">SCHEDULE CHANGES</span><h2>Acknowledgement requested</h2></div>
+      <div class="request-section-heading"><span class="eyebrow">SCHEDULE CHANGES</span><h2>Driver confirmation requested</h2></div>
       ${acknowledgements.map(acknowledgement => {
         const summary = acknowledgement.summary || {}
         return `<article class="request-card schedule-ack-card ${acknowledgement.status === 'declined' ? 'needs-action' : ''}">
           <div class="group-card-head"><div><span class="group-context-badge">${escapeHTML(acknowledgement.group_name)}</span><h3>Review changed rides</h3></div>${statusPill(acknowledgement.status)}</div>
-          <p class="meta">${Number(summary.timeChanged || 0)} time change${Number(summary.timeChanged || 0) === 1 ? '' : 's'} · ${Number(summary.driverChanged || 0)} driver change${Number(summary.driverChanged || 0) === 1 ? '' : 's'} · published ${formatDateTime(acknowledgement.published_at)}</p>
+          <p class="meta">${Number(summary.timeChanged || 0)} time change${Number(summary.timeChanged || 0) === 1 ? '' : 's'} · ${Number(summary.driverChanged || 0)} driver change${Number(summary.driverChanged || 0) === 1 ? '' : 's'} · shared ${formatDateTime(acknowledgement.published_at)}</p>
           ${acknowledgement.note ? `<p>${escapeHTML(acknowledgement.note)}</p>` : ''}
-          <div class="button-row"><button class="action-button green" data-action="acknowledge-schedule-change" data-change-set-id="${acknowledgement.change_set_id}" type="button">Acknowledge</button><button class="action-button" data-action="flag-schedule-change" data-change-set-id="${acknowledgement.change_set_id}" type="button">Flag a problem</button></div>
+          <div class="button-row"><button class="action-button green" data-action="acknowledge-schedule-change" data-change-set-id="${acknowledgement.change_set_id}" type="button">Confirm changes</button><button class="action-button" data-action="flag-schedule-change" data-change-set-id="${acknowledgement.change_set_id}" type="button">Report a problem</button></div>
         </article>`
       }).join('')}
     </section>`)
@@ -414,7 +438,7 @@ function renderAssignmentConflictNotice() {
   if (!conflicts.length) return
   list.insertAdjacentHTML('afterbegin', `
     <section class="request-section" data-assignment-conflicts>
-      <div class="request-section-heading"><span class="eyebrow">ASSIGNMENT CONFLICTS</span><h2>${conflicts.length} overlapping ride${conflicts.length === 1 ? '' : 's'}</h2></div>
+      <div class="request-section-heading"><span class="eyebrow">OVERLAPPING RIDES</span><h2>${conflicts.length} ride${conflicts.length === 1 ? '' : 's'} need attention</h2></div>
       ${conflicts.slice(0, 12).map(conflict => `<article class="request-card conflict-card"><div class="group-card-head"><div><span class="group-context-badge">${escapeHTML(conflict.first_group_name)}</span><h3>${escapeHTML(conflict.first_label)}</h3></div><span class="status-pill danger">Overlap</span></div><p>${formatDateTime(conflict.first_start)} overlaps <strong>${escapeHTML(conflict.second_group_name)}</strong> · ${escapeHTML(conflict.second_label)}</p></article>`).join('')}
     </section>`)
 }

@@ -7,6 +7,8 @@ state.accountDevices = []
 
 const KCP_DEVICE_ID_KEY = 'kcp.deviceId.v1'
 const KCP_APP_VERSION = 'account-v1'
+const KCP_PENDING_PROFILE_NAME_KEY = 'kcp.pendingProfileName.v1'
+let kcpVerifiedResumePromise = null
 
 function kcpDeviceId() {
   let value = localStorage.getItem(KCP_DEVICE_ID_KEY)
@@ -75,6 +77,56 @@ loadProfile = async function () {
       await kcpPermanentPreviousLoadProfile()
       await loadKcpIdentity()
     }
+  }
+}
+
+function pendingVerifiedProfileName() {
+  const metadata = state.session?.user?.user_metadata || {}
+  const emailName = state.session?.user?.email?.split('@')[0]
+    ?.replace(/[._-]+/g, ' ')
+    ?.replace(/\b\w/g, character => character.toUpperCase())
+  return localStorage.getItem(KCP_PENDING_PROFILE_NAME_KEY)
+    || metadata.full_name
+    || metadata.name
+    || el('profileName')?.value?.trim()
+    || emailName
+    || 'KCP member'
+}
+
+async function ensureVerifiedKcpAccount() {
+  await loadKcpIdentity()
+  if (!state.identity?.identity_verified) return false
+  if (kcpVerifiedResumePromise) return kcpVerifiedResumePromise
+
+  kcpVerifiedResumePromise = (async () => {
+    const displayName = pendingVerifiedProfileName()
+    const { error } = await supabase.rpc('kcp_resume_verified_account', {
+      p_display_name: displayName
+    })
+
+    if (error) {
+      if (!/Could not find the function|schema cache/i.test(error.message || '')) throw error
+      if (!state.profile) {
+        const { error: profileError } = await supabase.rpc('kcp_upsert_profile', {
+          p_display_name: displayName,
+          p_phone: null
+        })
+        if (profileError) throw profileError
+      }
+      await supabase.rpc('kcp_record_identity_upgrade')
+    }
+
+    await restoreRememberedMemberships()
+    await kcpPermanentPreviousLoadProfile()
+    await loadKcpIdentity()
+    if (state.profile) localStorage.removeItem(KCP_PENDING_PROFILE_NAME_KEY)
+    return Boolean(state.profile)
+  })()
+
+  try {
+    return await kcpVerifiedResumePromise
+  } finally {
+    kcpVerifiedResumePromise = null
   }
 }
 
@@ -169,6 +221,8 @@ el('emailSignInForm')?.addEventListener('submit', async event => {
   button.disabled = true
   setAccountStatus('emailSignInStatus', 'Sending a sign-in link…')
   try {
+    const pendingName = el('profileName')?.value?.trim()
+    if (pendingName) localStorage.setItem(KCP_PENDING_PROFILE_NAME_KEY, pendingName)
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
@@ -257,8 +311,8 @@ renderSettings = function () {
   profileCard.insertAdjacentHTML('afterend', `
     <div class="card" data-account-security>
       <div class="group-card-head">
-        <div><span class="eyebrow">ACCOUNT ACCESS</span><h2>${verified ? 'Email account secured' : 'Temporary device account'}</h2></div>
-        <span class="status-pill ${verified ? 'complete' : 'warning'}">${verified ? 'Verified' : 'Action needed'}</span>
+        <div><span class="eyebrow">ACCOUNT ACCESS</span><h2>${verified ? 'Verified email account' : 'Account saved only on this device'}</h2></div>
+        <span class="status-pill ${verified ? 'complete' : 'warning'}">${verified ? 'Verified' : 'Add a recovery email'}</span>
       </div>
       <p class="meta">${verified
         ? `Signed in as ${escapeHTML(identity.email || '')}. You can use the same KCP account on multiple devices.`
@@ -289,10 +343,9 @@ supabase.auth.onAuthStateChange(async event => {
       await registerKcpDevice()
       await loadKcpIdentity()
       if (state.identity?.identity_verified) {
-        await supabase.rpc('kcp_record_identity_upgrade')
-        await loadProfile()
+        await ensureVerifiedKcpAccount()
         if (state.profile) {
-          await refreshAll()
+          await enterApp({ view: 'home' })
           showConnection('Account synced.', 'success')
         }
       }

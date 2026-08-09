@@ -27,12 +27,12 @@ test('generic group and schedule dialogs expose the simple four-step workflow', 
     assert.match(dialogs, new RegExp(`id="${id}"`))
   }
 
-  assert.match(dialogs, /You become the Owner automatically/)
-  assert.match(dialogs, /Recurring days and times/)
-  assert.match(dialogs, /Driving responsibility/)
-  assert.match(dialogs, /Preview before publishing/)
-  assert.match(dialogs, /Rotate by week/)
-  assert.match(dialogs, /A calendar remains optional/)
+  assert.match(dialogs, /You become the group owner/)
+  assert.match(dialogs, /Days and ride times/)
+  assert.match(dialogs, /Choose drivers/)
+  assert.match(dialogs, /Check rides before sharing/)
+  assert.match(dialogs, /Take turns by week/)
+  assert.match(dialogs, /make the schedule live/)
 })
 
 test('schedule-builder styles are additive and reuse the KCP design tokens', async () => {

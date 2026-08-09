@@ -33,7 +33,7 @@ test('schedule setup uses progressive disclosure without removing capabilities',
   assert.match(enhancement, /scheduleBasicsAdvanced/)
   assert.match(enhancement, /schedule-session-advanced/)
   assert.match(enhancement, /scheduleRotationAdvanced/)
-  assert.match(enhancement, /Preview the latest changes before publishing/)
+  assert.match(enhancement, /Check the latest changes before making the schedule live/)
 
   // The simplified presentation must keep every original feature control.
   for (const id of [

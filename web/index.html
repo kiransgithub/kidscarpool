@@ -12,6 +12,7 @@
   <link rel="apple-touch-icon" href="./icon-1024.png">
   <link rel="stylesheet" href="./styles.css">
   <link rel="stylesheet" href="./fixes.css">
+  <link rel="stylesheet" href="./page-navigation.css">
   <title>Kidscarpool</title>
 </head>
 <body>
@@ -37,6 +38,16 @@
       <button id="switchGroupButton" class="link-button" type="button">Switch</button>
     </div>
 
+    <nav id="pageNavigationBar" class="page-navigation hidden" aria-label="Page controls">
+      <button id="pageBackButton" class="page-navigation-button" type="button" aria-label="Go back">
+        <span aria-hidden="true">‹</span><strong>Back</strong>
+      </button>
+      <span id="pageNavigationTitle" class="page-navigation-title"></span>
+      <button id="pageCloseButton" class="page-navigation-button close" type="button" aria-label="Close this page">
+        <strong>Close</strong><span aria-hidden="true">×</span>
+      </button>
+    </nav>
+
     <main id="mainContent" class="content" aria-live="polite">
       <section id="loadingView" class="center-state">
         <div class="spinner"></div>
@@ -48,12 +59,12 @@
         <div class="hero-card">
           <img src="./icon-1024.png" alt="KCP logo" class="hero-logo">
           <h1>Welcome to Kidscarpool</h1>
-          <p>The installed app remembers your private group access on this device.</p>
+          <p>Your group access is saved on this device.</p>
         </div>
 
         <div class="segmented" role="tablist">
-          <button class="segment active" data-onboarding-mode="profile" type="button">Start / Create group</button>
-          <button class="segment" data-onboarding-mode="invite" type="button">Join / restore with invite</button>
+          <button class="segment active" data-onboarding-mode="profile" type="button">Create a group</button>
+          <button class="segment" data-onboarding-mode="invite" type="button">Join with an invitation</button>
         </div>
 
         <form id="profileForm" class="card form-card">
@@ -65,14 +76,14 @@
 
         <form id="joinForm" class="card form-card hidden">
           <h2>Join or restore a private group</h2>
-          <p class="meta">Use the invitation supplied by a group Owner or Admin. Reusing the original invitation can restore that group on a new browser or device.</p>
+          <p class="meta">Use the invitation from your group manager. Keep it so you can restore access on another device.</p>
           <label>Invited member name<input id="joinName" required maxlength="80" autocomplete="name" placeholder="Invited name"></label>
           <label>Phone number <span class="optional">when included on the invitation</span><input id="joinPhone" inputmode="tel" autocomplete="tel" placeholder="Phone number"></label>
           <label>Invitation code<input id="joinToken" required maxlength="12" autocapitalize="characters" autocomplete="one-time-code" placeholder="Invitation code"></label>
-          <button class="primary-button" type="submit">Join or restore access</button>
+          <button class="primary-button" type="submit">Join group</button>
         </form>
 
-        <div class="privacy-note">Clearing all browser or installed-app website data removes local credentials. Keep the original invitation or request a recovery code from the group Owner.</div>
+        <div class="privacy-note">Clearing this app's website data removes the sign-in saved on this device. Keep the original invitation or ask the group owner for a one-time access code.</div>
       </section>
 
       <section id="homeView" class="view hidden" data-view="home">
@@ -82,7 +93,7 @@
         </div>
         <div id="noGroupHome" class="empty-card hidden">
           <h2>Create or join a carpool group</h2>
-          <p>Published rides appear here after an Owner or Admin configures the schedule.</p>
+          <p>Live rides appear here after a group manager sets the schedule.</p>
           <button class="primary-button" data-nav="groups" type="button">Open Groups</button>
         </div>
         <div id="nextTripsGrid" class="next-trips-grid">
@@ -102,7 +113,7 @@
       </section>
 
       <section id="scheduleView" class="view hidden" data-view="schedule">
-        <div class="section-heading"><div><span class="eyebrow">PUBLISHED PLAN</span><h1>Schedule</h1></div></div>
+        <div class="section-heading"><div><span class="eyebrow">LIVE RIDES</span><h1>Schedule</h1></div></div>
         <div id="scheduleList" class="stack"></div>
       </section>
 
@@ -112,7 +123,7 @@
       </section>
 
       <section id="leaderboardView" class="view hidden" data-view="leaderboard">
-        <div class="section-heading"><div><span class="eyebrow">FAIRNESS + FUN</span><h1>Leaderboard</h1></div></div>
+        <div class="section-heading"><div><span class="eyebrow">DRIVING CONTRIBUTIONS</span><h1>Driving summary</h1></div></div>
         <div id="leaderboardList" class="stack"></div>
       </section>
 
@@ -141,7 +152,7 @@
       <button class="nav-item" data-nav="groups" type="button"><span>👥</span><small>Groups</small></button>
       <button class="nav-item" data-nav="schedule" type="button"><span>▦</span><small>Schedule</small></button>
       <button class="nav-item" data-nav="volunteers" type="button"><span>♡</span><small>Volunteer</small></button>
-      <button class="nav-item" data-nav="leaderboard" type="button"><span>★</span><small>Points</small></button>
+      <button class="nav-item" data-nav="leaderboard" type="button"><span>★</span><small>Summary</small></button>
       <button class="nav-item" data-nav="calendar" type="button"><span>◫</span><small>Calendar</small></button>
       <button class="nav-item" data-nav="settings" type="button"><span>⚙</span><small>Settings</small></button>
     </nav>
@@ -188,7 +199,7 @@
       <label>Phone <span class="optional">optional</span><input id="invitePhone" inputmode="tel" placeholder="Phone number"></label>
       <label>Child or rider<input id="inviteChild" required placeholder="Child or rider name"></label>
       <label>Grade or level<input id="inviteGrade" type="number" min="0" max="12"></label>
-      <label>Role<select id="inviteRole"><option value="parent">Parent</option><option value="admin">Admin</option><option value="viewer">Viewer</option></select></label>
+      <label>Access level<select id="inviteRole"><option value="parent">Family member</option><option value="admin">Group manager</option><option value="viewer">View-only member</option></select></label>
       <button class="primary-button" type="submit">Create invitation</button>
     </form>
   </dialog>
@@ -196,11 +207,11 @@
   <dialog id="recoverGroupDialog" class="modal">
     <form id="recoverGroupForm" method="dialog" class="dialog-form">
       <div class="dialog-title"><h2>Recover group access</h2><button class="close-button" value="cancel" formmethod="dialog" aria-label="Close">×</button></div>
-      <p class="optional-calendar-note">Enter the group, member name, and one-time code supplied by the group administrator.</p>
+      <p class="optional-calendar-note">Enter the group, member name, and one-time access code supplied by the group manager.</p>
       <label>Group code<input id="recoverGroupCode" required autocapitalize="characters" placeholder="Group code"></label>
       <label>Member name<input id="recoverParentName" required autocomplete="name" placeholder="Member name"></label>
-      <label>One-time recovery code<input id="recoverCode" required maxlength="40" autocapitalize="characters" autocomplete="one-time-code" placeholder="Recovery code"></label>
-      <button class="primary-button" type="submit">Recover and remember this device</button>
+      <label>One-time access code<input id="recoverCode" required maxlength="40" autocapitalize="characters" autocomplete="one-time-code" placeholder="Access code"></label>
+      <button class="primary-button" type="submit">Restore access on this device</button>
     </form>
   </dialog>
 

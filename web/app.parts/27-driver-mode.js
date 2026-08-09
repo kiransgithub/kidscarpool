@@ -51,7 +51,7 @@ tripRow = function (trip) {
   const row = template.content.firstElementChild
   const actions = row?.querySelector('.button-row')
   if (actions && !actions.querySelector('[data-action="open-driver-mode"]')) {
-    actions.insertAdjacentHTML('afterbegin', `<button class="action-button driver-mode-button" data-action="open-driver-mode" data-trip-id="${trip.id}" type="button">Driver mode</button>`)
+    actions.insertAdjacentHTML('afterbegin', `<button class="action-button driver-mode-button" data-action="open-driver-mode" data-trip-id="${trip.id}" type="button">Open ride checklist</button>`)
   }
   return row?.outerHTML || html
 }
@@ -150,7 +150,7 @@ async function loadDriverModeSnapshot() {
     p_trip_id: driverModeTripId
   })
   if (error) {
-    el('driverModeContent').innerHTML = `<div class="driver-mode-empty"><h2>Driver mode unavailable</h2><p>${escapeHTML(sanitizeUserMessage(error.message))}</p></div>`
+    el('driverModeContent').innerHTML = `<div class="driver-mode-empty"><h2>Ride checklist unavailable</h2><p>${escapeHTML(sanitizeUserMessage(error.message))}</p></div>`
     return
   }
   driverModeSnapshot = data
@@ -185,7 +185,7 @@ function renderDriverMode() {
     </section>
     ${trip.status === 'in_progress' ? `<section class="driver-progress"><div style="width:${roster.length ? Math.round(accounted / roster.length * 100) : 0}%"></div></section>` : ''}
     <section class="driver-route-section">
-      <div class="driver-section-title"><span class="eyebrow">ROUTE</span><h2>${trip.status === 'in_progress' ? 'Pickup checklist' : 'Ride roster'}</h2></div>
+      <div class="driver-section-title"><span class="eyebrow">ROUTE</span><h2>${trip.status === 'in_progress' ? 'Pickup checklist' : 'Children on this ride'}</h2></div>
       <div class="driver-child-list">${roster.map(child => driverChildCard(child, trip.status)).join('') || '<div class="driver-mode-empty"><p>No child roster is available.</p></div>'}</div>
     </section>
     <section class="driver-destination-card">

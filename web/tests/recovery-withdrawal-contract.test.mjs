@@ -40,7 +40,7 @@ test('generic recovery UI and invitation restoration language remain present', a
 
   assert.match(index, /id="recoverGroupDialog"/)
   assert.match(index, /id="recoverGroupForm"/)
-  assert.match(index, /Join \/ restore with invite/)
+  assert.match(index, /Join with an invitation/)
   assert.match(index, /placeholder="Group code"/)
   assert.match(index, /placeholder="Member name"/)
   assert.match(bootstrap, /storage:\s*kcpAuthStorage/)

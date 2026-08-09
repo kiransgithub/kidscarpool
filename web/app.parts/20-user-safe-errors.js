@@ -105,7 +105,7 @@ function classifyKcpError(error) {
     [/invitation.*not found|invitation code was not found/i, 'INVITE_NOT_FOUND', 'That invitation code was not found. Ask the group owner for a current invitation.'],
     [/invitation.*expired|this invitation has expired/i, 'INVITE_EXPIRED', 'That invitation has expired. Ask the group owner for a new invitation.'],
     [/invitation.*no longer|already accepted/i, 'INVITE_USED', 'That invitation is no longer available. Sign in with the account that accepted it or ask the group owner for help.'],
-    [/recovery code.*invalid|expired|already used/i, 'RECOVERY_INVALID', 'That recovery code is invalid, expired, or already used. Ask the platform administrator for a new code.'],
+    [/recovery code.*invalid|expired|already used/i, 'RECOVERY_INVALID', 'That one-time access code is invalid, expired, or already used. Ask the group owner for a new code.'],
     [/cover request.*no longer open|this cover request is no longer open/i, 'COVER_CLOSED', 'That cover request has already changed. Refresh the group and review the current driver.'],
     [/too early|10 minutes before|start window/i, 'TRIP_EARLY', 'This ride can be started beginning 10 minutes before its scheduled time.'],
     [/enter |select |choose |required|must contain|must be between|add at least/i, 'VALIDATION', raw]

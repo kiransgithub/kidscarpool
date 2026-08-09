@@ -7,7 +7,7 @@ const here = path.dirname(fileURLToPath(import.meta.url))
 const output = process.argv[2] || path.join(here, 'app.js')
 const partsDir = path.join(here, 'app.parts')
 const parts = fs.readdirSync(partsDir)
-  .filter(name => name.endsWith('.js'))
+  .filter(name => name.endsWith('.js') && !name.startsWith('.'))
   .sort((left, right) => left.localeCompare(right, 'en', { numeric: true }))
 
 let source = parts

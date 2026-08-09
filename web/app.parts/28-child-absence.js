@@ -27,11 +27,11 @@ if (!el('childAbsenceDialog')) {
     <dialog id="childAbsenceDialog" class="modal child-absence-dialog">
       <form id="childAbsenceForm" class="dialog-form">
         <div class="dialog-title">
-          <div><span class="eyebrow">CHILD RIDE UPDATE</span><h2>Report child unavailable</h2></div>
+          <div><span class="eyebrow">RIDE UPDATE</span><h2>Child is not riding</h2></div>
           <button id="childAbsenceClose" class="close-button" type="button" aria-label="Close">×</button>
         </div>
         <label>Child or rider<select id="absenceChild" required></select></label>
-        <label>Affected ride
+        <label>Which ride?
           <select id="absenceTrip"><option value="">Date or date range</option></select>
         </label>
         <div id="absenceDateRange" class="two-column-form">
@@ -49,8 +49,8 @@ if (!el('childAbsenceDialog')) {
           </select>
         </label>
         <label>Note <span class="optional">optional</span><textarea id="absenceNote" rows="3" placeholder="Anything the assigned driver should know"></textarea></label>
-        <label class="checkbox-row"><input id="absenceNotifyDriver" type="checkbox" checked><span><strong>Notify the assigned driver</strong><small>The driver roster updates immediately. Push delivery is added in the notification PR.</small></span></label>
-        <button class="primary-button" type="submit">Save ride update</button>
+        <label class="checkbox-row"><input id="absenceNotifyDriver" type="checkbox" checked><span><strong>Notify the assigned driver</strong><small>The driver's child list updates immediately.</small></span></label>
+        <button class="primary-button" type="submit">Tell the driver</button>
       </form>
     </dialog>`)
 }

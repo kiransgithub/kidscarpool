@@ -19,7 +19,7 @@ if (!el('tripSwapDialog')) {
   document.body.insertAdjacentHTML('beforeend', `
     <dialog id="tripSwapDialog" class="modal trip-swap-dialog">
       <form id="tripSwapForm" class="dialog-form">
-        <div class="dialog-title"><div><span class="eyebrow">TRADE RESPONSIBILITY</span><h2>Request ride swap</h2></div><button id="tripSwapClose" class="close-button" type="button" aria-label="Close">×</button></div>
+        <div class="dialog-title"><div><span class="eyebrow">SWAP RIDES</span><h2>Request a ride swap</h2></div><button id="tripSwapClose" class="close-button" type="button" aria-label="Close">×</button></div>
         <div id="tripSwapOffered" class="swap-summary"></div>
         <label>Ride you would take instead<select id="tripSwapRequested" required></select></label>
         <label>Note <span class="optional">optional</span><textarea id="tripSwapNote" rows="3" placeholder="Why this swap helps"></textarea></label>
@@ -178,7 +178,7 @@ function coverSwapCard(operation) {
 
   return `<article class="request-card cover-operation ${escapeHTML(operation.escalation_stage || 'open')}" data-operation-id="${operation.operation_id}">
     <div class="group-card-head">
-      <div><span class="group-context-badge">${escapeHTML(operation.group_name)}</span><h3>${escapeHTML(operation.primary_label || 'Ride coverage')}</h3></div>
+      <div><span class="group-context-badge">${escapeHTML(operation.group_name)}</span><h3>${escapeHTML(operation.primary_label || 'Driver needed')}</h3></div>
       <span class="status-pill ${escalation.css}">${escapeHTML(escalation.label)}</span>
     </div>
     <p class="meta">${operation.primary_time ? formatDateTime(operation.primary_time) : 'Time confirmation required'} · Requested by ${escapeHTML(operation.requested_by_name || 'Member')}</p>
@@ -189,7 +189,7 @@ function coverSwapCard(operation) {
     <div class="button-row">
       ${canVolunteer ? `<button class="action-button green" data-action="accept-cover" data-request-id="${operation.operation_id}" type="button">Volunteer</button>` : ''}
       ${ownOpen ? `<button class="action-button" data-action="withdraw-cover" data-request-id="${operation.operation_id}" type="button">Withdraw request</button>` : ''}
-      ${acceptedByMe ? `<button class="action-button orange" data-action="release-accepted-cover" data-request-id="${operation.operation_id}" type="button">Release accepted ride</button>` : ''}
+      ${acceptedByMe ? `<button class="action-button orange" data-action="release-accepted-cover" data-request-id="${operation.operation_id}" type="button">I cannot drive this ride</button>` : ''}
       <button class="action-button" data-action="open-agenda-trip" data-group-id="${operation.group_id}" data-trip-id="${operation.primary_trip_id}" type="button">View ride</button>
     </div>
   </article>`
@@ -232,8 +232,8 @@ function coverEscalationPresentation(stage) {
   return ({
     open: { label: 'Open', css: 'info', detail: '' },
     eligible_drivers: { label: 'Drivers notified', css: 'warning', detail: 'The ride is within 60 minutes and needs an eligible volunteer.' },
-    group_admin: { label: 'Admin escalation', css: 'warning', detail: 'The ride is within 30 minutes. A group Owner or Admin should resolve coverage.' },
-    unresolved: { label: 'Coverage unresolved', css: 'danger', detail: 'The ride is within 15 minutes and no volunteer is assigned.' },
+    group_admin: { label: 'Group manager notified', css: 'warning', detail: 'The ride is within 30 minutes. A group manager needs to find a driver.' },
+    unresolved: { label: 'No driver yet', css: 'danger', detail: 'The ride is within 15 minutes and still needs a driver.' },
     resolved: { label: 'Resolved', css: 'complete', detail: '' }
   })[stage] || { label: humanize(stage || 'open'), css: '', detail: '' }
 }
