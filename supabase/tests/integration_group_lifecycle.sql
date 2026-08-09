@@ -3,7 +3,7 @@
 --
 -- Covers: profile -> create group -> invite -> accept -> constraints request
 -- -> admin review -> schedule build -> publish -> start/complete -> points
--- -> cover request/accept/withdraw -> owner transfer -> audit immutability
+-- -> cover request/accept/withdraw -> owner invariant -> audit immutability
 -- -> RLS isolation from a non-member.
 --
 -- Usage: psql -d kcp -v ON_ERROR_STOP=1 -f this_file
@@ -50,7 +50,8 @@ begin
 
     v_owner_pid := public.kcp_current_participant_id(v_group.id);
     assert v_owner_pid is not null, 'creator must be an active participant';
-    assert (select role from public.kcp_group_participants where id = v_owner_pid)
+    assert (select role from public.kcp_memberships
+            where group_id = v_group.id and user_id = v_owner and status = 'active')
            = 'owner', 'creator must be owner';
 
     -- a fresh group ships with an empty draft plan
@@ -212,15 +213,19 @@ begin
     assert (select status from public.kcp_cover_requests where id = v_cover)
            = 'withdrawn', 'request must be marked withdrawn';
 
-    -- ---- owner transfer is atomic -----------------------------------------
+    -- ---- exactly one active owner is enforced -----------------------------
     perform auth.become(v_owner);
-    perform public.kcp_transfer_ownership(v_group.id, v_parent_pid);
-    assert (select role from public.kcp_group_participants where id = v_parent_pid)
-           = 'owner', 'ownership must move';
-    assert (select role from public.kcp_group_participants where id = v_owner_pid)
-           = 'admin', 'previous owner becomes admin';
-    assert (select count(*) from public.kcp_group_participants
-            where group_id = v_group.id and role = 'owner' and status = 'active') = 1,
+    v_failed := false;
+    begin
+        update public.kcp_memberships
+           set role = 'owner'
+         where group_id = v_group.id and user_id = v_parent and status = 'active';
+    exception when unique_violation then v_failed := true;
+    end;
+    assert v_failed, 'a second active owner must be rejected';
+    assert (select count(*) from public.kcp_memberships membership
+            where membership.group_id = v_group.id
+              and membership.role = 'owner' and membership.status = 'active') = 1,
            'exactly one active owner at all times';
 
     -- ---- audit log is append-only -----------------------------------------
