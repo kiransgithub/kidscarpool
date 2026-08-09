@@ -48,12 +48,15 @@ jobs:
               'web/generic-schedule.js',
               'web/schedule-builder-usability.css',
               'web/weekly-matrix-flow.css',
+              'web/account-auth.css',
               'web/app.parts/12-weekly-matrix-flow.js',
               'web/app.parts/13-published-availability.js',
               'web/app.parts/14-database-driven-ui.js',
               'web/app.parts/15-generic-recovery.js',
               'web/app.parts/16-role-action-guard.js',
-              'web/app.parts/17-database-state-sync.js'
+              'web/app.parts/17-database-state-sync.js',
+              'web/app.parts/18-permanent-auth.js',
+              'web/app.parts/18a-account-styles.js'
           ]
           for asset in required_assets:
               assert Path(asset).exists(), f'Missing required client asset: {asset}'
@@ -132,7 +135,7 @@ jobs:
               raise SystemExit(f'Database lint returned {len(findings)} finding(s)')
           print('Database lint returned zero findings')
           PY
-      - name: Run consolidated database regression and integration suites
+      - name: Run database regression and integration suites
         run: |
           DB_CONTAINER="$(docker ps --filter 'name=supabase_db_' --format '{{.Names}}' | head -1)"
           test -n "$DB_CONTAINER"
@@ -147,5 +150,6 @@ jobs:
           run_sql "single-owner invariant" supabase/tests/regression_owner_invariant.sql
           run_sql "group lifecycle end to end" supabase/tests/integration_group_lifecycle.sql
           run_sql "weekend schedule and availability" supabase/tests/regression_weekend_schedule.sql
+          run_sql "permanent identity and devices" supabase/tests/integration_permanent_identity.sql
       - name: Show migration status
         run: supabase migration list --local
