@@ -32,11 +32,12 @@ alter table public.kcp_trips
     add column if not exists unconfirmed_at timestamptz,
     add column if not exists verification_note text;
 
+alter table public.kcp_trips drop constraint if exists kcp_trips_started_source_check;
+alter table public.kcp_trips drop constraint if exists kcp_trips_completed_source_check;
+
 update public.kcp_trips set started_source = 'legacy_automatic' where started_source = 'automatic';
 update public.kcp_trips set completed_source = 'legacy_automatic' where completed_source = 'automatic';
 
-alter table public.kcp_trips drop constraint if exists kcp_trips_started_source_check;
-alter table public.kcp_trips drop constraint if exists kcp_trips_completed_source_check;
 alter table public.kcp_trips
     add constraint kcp_trips_started_source_check
     check (started_source is null or started_source in ('manual','admin','legacy_automatic')),
