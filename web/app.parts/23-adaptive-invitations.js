@@ -113,17 +113,18 @@ invitationRow = function (invitation) {
   const child = invitation.child_name
     ? `${escapeHTML(invitation.child_name)}${invitation.grade == null ? '' : ` · Grade ${invitation.grade}`}`
     : 'No child attached'
+  const pending = invitation.status === 'pending'
   return `<div class="timeline-row adaptive-invitation-row">
     <div>
       <strong>${escapeHTML(invitation.invited_parent_name)}</strong>
       <span class="meta">${escapeHTML(capitalize(role))} · ${child} · expires ${formatDateTime(invitation.expires_at)}</span>
-      <span class="meta">${invitation.can_drive && role !== 'viewer' ? 'Driving enabled' : 'No driving assignments'}</span>
+      <span class="meta">${invitation.can_drive && role !== 'viewer' ? 'Driving enabled' : 'No driving assignments'} · ${escapeHTML(capitalize(invitation.status))}</span>
     </div>
-    <div class="button-row">
+    ${pending ? `<div class="button-row">
       <button class="action-button" data-action="share-invite" data-invite-id="${invitation.id}" type="button">Share</button>
       <button class="action-button" data-action="resend-invite" data-invite-id="${invitation.id}" type="button">New code</button>
       <button class="action-button orange" data-action="revoke-invite" data-invite-id="${invitation.id}" type="button">Revoke</button>
-    </div>
+    </div>` : `<span class="status-pill ${invitation.status === 'accepted' ? 'complete' : 'warning'}">${escapeHTML(capitalize(invitation.status))}</span>`}
   </div>`
 }
 
@@ -133,6 +134,18 @@ shareInvitation = async function (invitation) {
   url.searchParams.set('invite', invitation.token)
   const childText = invitation.child_name ? `\nChild or rider: ${invitation.child_name}` : ''
   const text = `Join ${state.activeGroup?.name || 'this Kidscarpool group'}\nRole: ${capitalize(invitation.role || 'member')}\nInvited name: ${invitation.invited_parent_name}${childText}\nOpen the secure invitation link:`
+
+  if (invitation.email) {
+    const { error } = await supabase.auth.signInWithOtp({
+      email: invitation.email,
+      options: { emailRedirectTo: url.toString(), shouldCreateUser: true }
+    })
+    if (!error) {
+      toast(`Invitation emailed to ${invitation.email}`)
+      return
+    }
+    toast('The invitation was created, but email delivery is unavailable or rate-limited. Share the private link instead.', true)
+  }
 
   if (navigator.share) {
     await navigator.share({ title: 'Kidscarpool invitation', text, url: url.toString() })
@@ -186,7 +199,10 @@ if (!el('invitationAcceptDialog')) {
         <input id="invitationAcceptToken" type="hidden">
         <label>Invited member name<input id="invitationAcceptName" required autocomplete="name"></label>
         <label>Phone <span class="optional">only when requested by the group</span><input id="invitationAcceptPhone" autocomplete="tel" inputmode="tel"></label>
-        <button id="invitationAcceptSubmit" class="primary-button" type="submit">Accept invitation</button>
+        <div class="button-row">
+          <button id="invitationDecline" class="secondary-button" type="button">Decline</button>
+          <button id="invitationAcceptSubmit" class="primary-button" type="submit">Accept invitation</button>
+        </div>
       </form>
     </dialog>`)
 }
@@ -222,6 +238,7 @@ async function openInvitationLink(token) {
   const preview = data[0]
   el('invitationAcceptName').value = preview.member_name || state.profile?.display_name || ''
   el('invitationAcceptSubmit').disabled = preview.status !== 'pending'
+  el('invitationDecline').disabled = preview.status !== 'pending'
   el('invitationAcceptPreview').innerHTML = `
     <strong>${escapeHTML(preview.group_name)}</strong>
     <span>${escapeHTML(capitalize(preview.role))}${preview.child_name ? ` · ${escapeHTML(preview.child_name)}` : ''}</span>
@@ -251,6 +268,18 @@ el('invitationAcceptForm')?.addEventListener('submit', async event => {
     return true
   }, 'Invitation accepted', { operation: 'accept_invitation' })
   return accepted
+})
+
+el('invitationDecline')?.addEventListener('click', async () => {
+  if (!confirm('Decline this carpool invitation? The Owner will see that you declined.')) return
+  await runAction(async () => {
+    const { error } = await supabase.rpc('kcp_decline_invitation', {
+      p_token: el('invitationAcceptToken').value
+    })
+    if (error) throw error
+    closeInvitationAcceptDialog()
+    history.replaceState({}, '', location.pathname)
+  }, 'Invitation declined', { operation: 'decline_invitation' })
 })
 
 queueMicrotask(() => {

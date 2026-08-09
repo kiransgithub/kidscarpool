@@ -67,7 +67,7 @@ function renderGroupAdminPanel() {
   if (!state.activeGroup) { panel.classList.add('hidden'); return }
   panel.classList.remove('hidden')
   const admin = isAdmin()
-  const pendingInvites = state.invitations.filter(inv => inv.status === 'pending')
+  const recentInvites = state.invitations.slice(0, 20)
   panel.innerHTML = `
     <div class="card">
       <h2>${escapeHTML(state.activeGroup.name)} administration</h2>
@@ -79,7 +79,7 @@ function renderGroupAdminPanel() {
       </div>
     </div>
     <div class="card"><h2>Members and admins</h2>${state.memberships.map(member => memberRow(member, admin)).join('')}</div>
-    ${admin ? `<div class="card"><h2>Invitation history</h2>${pendingInvites.length ? pendingInvites.map(invitationRow).join('') : '<p class="meta">No pending invitations.</p>'}</div>` : ''}`
+    ${admin ? `<div class="card"><h2>Invitation history</h2>${recentInvites.length ? recentInvites.map(invitationRow).join('') : '<p class="meta">No invitations yet.</p>'}</div>` : ''}`
 }
 
 function memberRow(member, admin) {

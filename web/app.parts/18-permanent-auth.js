@@ -186,6 +186,20 @@ el('emailSignInForm')?.addEventListener('submit', async event => {
 })
 
 document.addEventListener('click', event => {
+  const signOut = event.target.closest('[data-action="sign-out"]')
+  if (signOut) {
+    event.preventDefault()
+    if (!confirm('Sign out and remove this device’s remembered group access?')) return
+    runAction(async () => {
+      const links = await loadDeviceLinks()
+      for (const link of links) await removeDeviceLink(link.groupId)
+      localStorage.removeItem(ACTIVE_GROUP_KEY)
+      await supabase.auth.signOut()
+      location.reload()
+    }, 'Signed out')
+    return
+  }
+
   const modeButton = event.target.closest('[data-onboarding-mode]')
   if (modeButton) {
     event.stopImmediatePropagation()
@@ -249,7 +263,10 @@ renderSettings = function () {
       <p class="meta">${verified
         ? `Signed in as ${escapeHTML(identity.email || '')}. You can use the same KCP account on multiple devices.`
         : 'Link an email before a wider pilot so clearing browser data or changing phones does not remove access.'}</p>
-      ${verified ? '' : '<button class="primary-small" data-action="secure-account" type="button">Secure with email</button>'}
+      <div class="button-row">
+        ${verified ? '' : '<button class="primary-small" data-action="secure-account" type="button">Secure with email</button>'}
+        <button class="action-button orange" data-action="sign-out" type="button">Sign out</button>
+      </div>
       <h3 style="margin:18px 0 8px">Your devices</h3>
       <div class="account-device-list">
         ${(state.accountDevices || []).map(device => `

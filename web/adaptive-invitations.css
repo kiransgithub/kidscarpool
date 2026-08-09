@@ -28,7 +28,15 @@
   align-items: flex-start;
   gap: 10px;
 }
-.checkbox-row input { margin-top: 4px; }
+.checkbox-row input {
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  margin-top: 2px;
+  padding: 0;
+  accent-color: #155eef;
+}
+.checkbox-row > span { min-width: 0; overflow-wrap: anywhere; line-height: 1.35; }
 .checkbox-row strong, .checkbox-row small { display: block; }
 .checkbox-row small { margin-top: 2px; color: #64748b; }
 

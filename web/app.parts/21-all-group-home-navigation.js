@@ -5,6 +5,20 @@ state.allGroupAgenda = []
 state.allGroupRequests = []
 state.agendaGroupFilter = 'all'
 
+function primaryNavIcon(name) {
+  const paths = {
+    home: '<path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13v-9.5"/><path d="M9.5 20v-6h5v6"/>',
+    schedule: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/><path d="m9 16 2 2 4-4"/>',
+    requests: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/>',
+    groups: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+    more: '<circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>',
+    points: '<path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8-6.2-3.2L5.8 21 7 14.2 2 9.3l6.9-1Z"/>',
+    calendar: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/>',
+    settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21h-4v-.1A1.7 1.7 0 0 0 8.6 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3v-4h.1A1.7 1.7 0 0 0 4.6 8.6a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3h4v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.4 9c.37.38.58.9.6 1.4V13c-.02.52-.23 1.02-.6 1.4Z"/>'
+  }
+  return `<svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">${paths[name]}</svg>`
+}
+
 if (!el('requestsView')) {
   el('mainContent')?.insertAdjacentHTML('beforeend', `
     <section id="requestsView" class="view hidden" data-view="requests">
@@ -14,9 +28,9 @@ if (!el('requestsView')) {
     <section id="moreView" class="view hidden" data-view="more">
       <div class="section-heading"><div><span class="eyebrow">ACCOUNT + GROUP TOOLS</span><h1>More</h1></div></div>
       <div class="more-grid">
-        <button class="more-card" data-more-view="leaderboard" type="button"><span>★</span><strong>Points</strong><small>Fairness and volunteer credit</small></button>
-        <button class="more-card" data-more-view="calendar" type="button"><span>◫</span><strong>Calendar</strong><small>Closures and exception dates</small></button>
-        <button class="more-card" data-more-view="settings" type="button"><span>⚙</span><strong>Settings</strong><small>Profile, availability and devices</small></button>
+        <button class="more-card" data-more-view="leaderboard" type="button"><span>${primaryNavIcon('points')}</span><strong>Points</strong><small>Fairness and volunteer credit</small></button>
+        <button class="more-card" data-more-view="calendar" type="button"><span>${primaryNavIcon('calendar')}</span><strong>Calendar</strong><small>Closures and exception dates</small></button>
+        <button class="more-card" data-more-view="settings" type="button"><span>${primaryNavIcon('settings')}</span><strong>Settings</strong><small>Profile, availability and devices</small></button>
       </div>
     </section>`)
 }
@@ -26,11 +40,11 @@ function installFiveTabNavigation() {
   if (!nav || nav.dataset.fiveTab === 'true') return
   nav.dataset.fiveTab = 'true'
   nav.innerHTML = `
-    <button class="nav-item active" data-nav="home" data-kcp-primary-nav type="button"><span>⌂</span><small>Home</small></button>
-    <button class="nav-item" data-nav="schedule" data-kcp-primary-nav type="button"><span>▦</span><small>Schedule</small></button>
-    <button class="nav-item" data-nav="requests" data-kcp-primary-nav type="button"><span>!</span><small>Requests</small></button>
-    <button class="nav-item" data-nav="groups" data-kcp-primary-nav type="button"><span>👥</span><small>Groups</small></button>
-    <button class="nav-item" data-nav="more" data-kcp-primary-nav type="button"><span>•••</span><small>More</small></button>`
+    <button class="nav-item active" data-nav="home" data-kcp-primary-nav type="button"><span>${primaryNavIcon('home')}</span><small>Home</small></button>
+    <button class="nav-item" data-nav="schedule" data-kcp-primary-nav type="button"><span>${primaryNavIcon('schedule')}</span><small>Schedule</small></button>
+    <button class="nav-item" data-nav="requests" data-kcp-primary-nav type="button"><span>${primaryNavIcon('requests')}</span><small>Requests</small></button>
+    <button class="nav-item" data-nav="groups" data-kcp-primary-nav type="button"><span>${primaryNavIcon('groups')}</span><small>Groups</small></button>
+    <button class="nav-item" data-nav="more" data-kcp-primary-nav type="button"><span>${primaryNavIcon('more')}</span><small>More</small></button>`
 }
 
 installFiveTabNavigation()
