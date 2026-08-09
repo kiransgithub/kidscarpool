@@ -115,7 +115,7 @@ begin
     if not exists (
         select 1 from public.kcp_platform_audit_events
         where action = 'break_glass_data_viewed'
-          and resource_id = (select group_id::text from support_fixture)
+          and entity_id = (select group_id::text from support_fixture)
     ) then
         raise exception 'Sensitive support view was not audited';
     end if;
