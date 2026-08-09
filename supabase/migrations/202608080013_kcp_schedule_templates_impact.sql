@@ -227,12 +227,12 @@ begin
         from public.kcp_plan_occurrences(plan.id, plan.starts_on, plan.ends_on, 10000) occurrence
     ), candidate_base as (
         select
-            (item->>'actual_date')::date as trip_date,
+            (item->>'service_date')::date as trip_date,
             item->>'leg_type' as leg_type,
             item->>'display_label' as display_label,
             item->>'session_name' as session_name,
             nullif(item->>'participant_id','')::uuid as participant_id,
-            ((item->>'actual_date')::date::text || ' ' || (item->>'local_time'))::timestamp at time zone plan.timezone as scheduled_time
+            (item->>'scheduled_at')::timestamptz as scheduled_time
         from occurrence_json
     ), candidates as (
         select candidate_base.*,
