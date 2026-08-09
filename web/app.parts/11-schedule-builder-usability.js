@@ -372,6 +372,11 @@ function updateScheduleBuilderActions() {
 
   back.classList.toggle('hidden', kcpScheduleStep === 1)
   publish.classList.toggle('hidden', kcpScheduleStep !== 4)
+  const pendingDrivers = (state.invitations || []).filter(invitation => invitation.status === 'pending' && invitation.can_drive)
+  publish.disabled = pendingDrivers.length > 0
+  publish.title = pendingDrivers.length
+    ? 'Waiting for every invited driver to accept or decline. Preview remains available.'
+    : ''
   actions.classList.toggle('is-final-step', kcpScheduleStep === 4)
 
   if (kcpScheduleStep === 1 || kcpScheduleStep === 2) {

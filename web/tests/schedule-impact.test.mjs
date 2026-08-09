@@ -31,7 +31,7 @@ test('preview calls the server impact engine before publishing', () => {
   assert.match(source, /kcp_schedule_change_details/)
   assert.match(source, /activeScheduleChangeSetId/)
   assert.match(source, /Generate a fresh preview and impact review before publishing/)
-  assert.match(source, /kcp_publish_schedule_plan_v2/)
+  assert.match(source, /kcp_publish_schedule_plan_v3/)
 })
 
 test('impact view shows ride changes, conflicts and urgent acknowledgement requirement', () => {

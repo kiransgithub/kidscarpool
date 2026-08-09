@@ -54,6 +54,39 @@ const genericGroupForm = el('genericGroupForm')
 const scheduleBuilderDialog = el('scheduleBuilderDialog')
 const scheduleBuilderForm = el('scheduleBuilderForm')
 
+function addGroupDriverInvite(values = {}) {
+  const container = el('groupDriverInvites')
+  if (!container) return
+  const row = document.createElement('article')
+  row.className = 'schedule-session-card group-driver-invite'
+  row.innerHTML = `
+    <div class="schedule-session-head"><strong>Invited driver</strong><button class="icon-delete" data-action="remove-group-driver" type="button" aria-label="Remove driver">×</button></div>
+    <div class="schedule-session-grid">
+      <label>Name<input data-driver-field="name" maxlength="80" value="${escapeHTML(values.name || '')}" placeholder="Parent or driver name"></label>
+      <label>Email<input data-driver-field="email" type="email" autocomplete="email" value="${escapeHTML(values.email || '')}" placeholder="driver@example.com"></label>
+      <label>Phone <span class="optional">optional</span><input data-driver-field="phone" autocomplete="tel" value="${escapeHTML(values.phone || '')}" placeholder="Phone number"></label>
+      <label>Child or rider <span class="optional">if known</span><input data-driver-field="child" maxlength="80" value="${escapeHTML(values.child || '')}" placeholder="Child name"></label>
+      <label class="full-width">Grade or level <span class="optional">if known</span><input data-driver-field="grade" maxlength="40" value="${escapeHTML(values.grade || '')}" placeholder="5, Beginner, Level 2"></label>
+    </div>`
+  container.appendChild(row)
+}
+
+function groupDriverInviteDrafts() {
+  return [...document.querySelectorAll('.group-driver-invite')].map(row => ({
+    name: row.querySelector('[data-driver-field="name"]').value.trim(),
+    email: row.querySelector('[data-driver-field="email"]').value.trim().toLowerCase(),
+    phone: row.querySelector('[data-driver-field="phone"]').value.trim(),
+    child: row.querySelector('[data-driver-field="child"]').value.trim(),
+    grade: row.querySelector('[data-driver-field="grade"]').value.trim()
+  })).filter(item => item.name || item.email || item.phone || item.child || item.grade)
+}
+
+el('addGroupDriverInvite')?.addEventListener('click', () => addGroupDriverInvite())
+document.addEventListener('click', event => {
+  const remove = event.target.closest('[data-action="remove-group-driver"]')
+  if (remove) remove.closest('.group-driver-invite')?.remove()
+})
+
 if (el('openCreateGroup') && genericGroupDialog) {
   el('openCreateGroup').addEventListener('click', event => {
     event.preventDefault()
@@ -61,6 +94,8 @@ if (el('openCreateGroup') && genericGroupDialog) {
     genericGroupForm?.reset()
     if (el('genericGroupType')) el('genericGroupType').value = 'school'
     if (el('genericTimezone')) el('genericTimezone').value = state.activeGroup?.timezone || 'America/Phoenix'
+    el('groupDriverInvites').innerHTML = ''
+    addGroupDriverInvite()
     genericGroupDialog.showModal()
   }, { capture: true })
 }
@@ -68,6 +103,11 @@ if (el('openCreateGroup') && genericGroupDialog) {
 if (genericGroupForm) {
   genericGroupForm.addEventListener('submit', async event => {
     event.preventDefault()
+    const invitedDrivers = groupDriverInviteDrafts()
+    if (invitedDrivers.some(driver => !driver.name || !driver.email)) {
+      toast('Each added driver needs a name and email so KCP can send the invitation.', true)
+      return
+    }
 
     await runAction(async () => {
       const { data, error } = await supabase.rpc('kcp_create_group_v3', {
@@ -91,6 +131,20 @@ if (genericGroupForm) {
       genericGroupDialog.close()
       genericGroupForm.reset()
       await refreshAll()
+      for (const driver of invitedDrivers) {
+        const { data: invitation, error: invitationError } = await supabase.rpc('kcp_create_driver_invitation', {
+          p_group_id: created.group_id,
+          p_member_name: driver.name,
+          p_email: driver.email,
+          p_phone: driver.phone || null,
+          p_child_name: driver.child || null,
+          p_grade_or_level: driver.grade || null,
+          p_expires_in_days: 14
+        }).single()
+        if (invitationError) throw invitationError
+        await shareInvitation(invitation)
+      }
+      await loadWorkspace()
       await openGenericScheduleBuilder(created.draft_plan_id)
     }, 'Private group created; you are the Owner')
   })

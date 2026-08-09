@@ -47,7 +47,9 @@
   color: #10203a;
   text-align: left;
 }
-.more-card > span { font-size: 1.45rem; color: #155eef; }
+.more-card > span { color: #155eef; }
+.nav-icon { width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.more-card .nav-icon { width: 30px; height: 30px; }
 .more-card strong { font-size: 1rem; }
 .more-card small { color: #64748b; line-height: 1.35; }
 
@@ -72,6 +74,8 @@
 .bottom-nav[data-five-tab="true"] {
   grid-template-columns: repeat(5, minmax(0, 1fr));
 }
+.bottom-nav[data-five-tab="true"] .nav-item { min-height: 56px; padding: 6px 2px; }
+.bottom-nav[data-five-tab="true"] .nav-item small { font-size: .7rem; }
 
 @media (prefers-color-scheme: dark) {
   .group-context-badge { background: #17366b; color: #dbeafe; }

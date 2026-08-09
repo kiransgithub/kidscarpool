@@ -38,3 +38,9 @@ test('installed app refreshes permanent account assets', () => {
   assert.match(worker, /v24-offline-accessibility/)
   assert.match(worker, /\.\/account-auth\.css/)
 })
+
+test('settings exposes a sign out that removes remembered device access', () => {
+  assert.match(source, /data-action="sign-out"/)
+  assert.match(source, /removeDeviceLink/)
+  assert.match(source, /supabase\.auth\.signOut/)
+})

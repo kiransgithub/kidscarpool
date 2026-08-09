@@ -14,6 +14,9 @@ test('primary navigation contains exactly five consumer destinations', () => {
   assert.match(source, /Groups/)
   assert.match(source, /More/)
   assert.match(styles, /grid-template-columns:\s*repeat\(5/)
+  assert.match(source, /function primaryNavIcon/)
+  assert.match(styles, /\.nav-icon\s*\{[^}]*width:\s*28px/s)
+  assert.match(styles, /min-height:\s*56px/)
 })
 
 test('Home and Schedule load rides across every active group membership', () => {

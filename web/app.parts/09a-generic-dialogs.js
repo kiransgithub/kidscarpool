@@ -53,6 +53,15 @@ if (!document.getElementById('genericGroupDialog')) {
         <label>Grade or level <span class="optional">optional</span>
           <input id="genericGradeLevel" maxlength="40" placeholder="5, Beginner, Level 2">
         </label>
+        <section class="schedule-step-card">
+          <div class="schedule-step-head">
+            <div class="schedule-step-number">+</div>
+            <div><span class="eyebrow">OTHER FAMILIES</span><h3>Invite drivers and add known riders</h3></div>
+          </div>
+          <p class="meta">Add the details you know. KCP emails each driver a private Accept or Decline link. You can preview the schedule while replies are pending.</p>
+          <div id="groupDriverInvites" class="schedule-sessions-list"></div>
+          <button id="addGroupDriverInvite" class="secondary-button" type="button">+ Add another driver</button>
+        </section>
         <button class="primary-button" type="submit">Create group & set schedule</button>
       </form>
     </dialog>

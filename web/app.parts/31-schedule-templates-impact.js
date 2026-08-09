@@ -347,6 +347,11 @@ document.addEventListener('click', async event => {
     toast('Generate a fresh preview and impact review before publishing.', true)
     return
   }
+  const pendingDrivers = (state.invitations || []).filter(invitation => invitation.status === 'pending' && invitation.can_drive)
+  if (pendingDrivers.length) {
+    toast(`${pendingDrivers.length} invited driver${pendingDrivers.length === 1 ? '' : 's'} must accept or decline before publishing. You can keep previewing this draft.`, true)
+    return
+  }
   const summary = activeScheduleImpact?.summary || {}
   const conflicts = Number(summary.conflicts || 0)
   const message = conflicts
@@ -356,7 +361,7 @@ document.addEventListener('click', async event => {
 
   const reason = el('schedulePublishReason')?.value.trim() || 'Published after impact review'
   await runAction(async () => {
-    const { data, error } = await supabase.rpc('kcp_publish_schedule_plan_v2', {
+    const { data, error } = await supabase.rpc('kcp_publish_schedule_plan_v3', {
       p_plan_id: activeSchedulePlanId,
       p_reason: reason,
       p_change_set_id: activeScheduleChangeSetId
