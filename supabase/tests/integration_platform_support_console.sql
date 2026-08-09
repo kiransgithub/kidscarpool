@@ -49,7 +49,7 @@ with invitation as (
         null, null, null, null, false, 14
     ) as row
 )
-update support_fixture set pending_invitation = (select (row).invitation_id from invitation);
+update support_fixture set pending_invitation = (select (row).id from invitation);
 
 select public.kcp_register_client_heartbeat(
     'group-owner-device-1234','test-build-1','cache-test','Test browser','Test agent',
