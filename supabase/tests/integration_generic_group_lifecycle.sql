@@ -4,15 +4,22 @@
 
 begin;
 
--- Create two disposable profile identities without coupling this test to a
--- particular GoTrue auth.users schema version. The profile FK is an internal
--- trigger, so replica mode is used only for these two test rows.
-set local session_replication_role = replica;
+-- Notification recipients are real application users, so keep the fixture
+-- consistent with the production auth/profile relationship.
+insert into auth.users(
+    id, aud, role, email, email_confirmed_at,
+    raw_app_meta_data, raw_user_meta_data, created_at, updated_at, is_anonymous
+)
+values
+    ('11111111-1111-4111-8111-111111111111'::uuid, 'authenticated', 'authenticated',
+     'owner.lifecycle@example.com', now(), '{}'::jsonb, '{}'::jsonb, now(), now(), false),
+    ('22222222-2222-4222-8222-222222222222'::uuid, 'authenticated', 'authenticated',
+     'volunteer.lifecycle@example.com', now(), '{}'::jsonb, '{}'::jsonb, now(), now(), false);
+
 insert into public.kcp_profiles(id, display_name, phone)
 values
     ('11111111-1111-4111-8111-111111111111'::uuid, 'Owner Tester', '6025550101'),
     ('22222222-2222-4222-8222-222222222222'::uuid, 'Volunteer Tester', '6025550102');
-set local session_replication_role = origin;
 
 do $$
 declare
