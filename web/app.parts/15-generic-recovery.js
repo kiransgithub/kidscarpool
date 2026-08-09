@@ -31,7 +31,7 @@ if (kcpGenericRecoveryForm) {
       const memberName = el('recoverParentName').value.trim()
       const recoveryCode = el('recoverCode').value.trim().toUpperCase()
       if (!groupCode || !memberName || !recoveryCode) {
-        throw new Error('Enter the group code, member name, and one-time recovery code.')
+        throw new Error('Enter the group code, member name, and one-time access code.')
       }
 
       const { data, error } = await supabase.rpc('kcp_recover_seeded_roster', {
@@ -62,7 +62,7 @@ renderSettings = function () {
   const profileCard = el('profileCard')
   if (!profileCard || profileCard.querySelector('[data-action="open-generic-recovery"]')) return
   profileCard.insertAdjacentHTML('beforeend', `
-    <button class="secondary-button" data-action="open-generic-recovery" type="button">Recover another group</button>`)
+    <button class="secondary-button" data-action="open-generic-recovery" type="button">Restore access to another group</button>`)
 }
 
 document.addEventListener('click', event => {

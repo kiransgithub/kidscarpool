@@ -40,7 +40,7 @@ if (!el('childSafetyDialog')) {
           <label>Emergency contact phone<input id="childEmergencyPhone" inputmode="tel" autocomplete="tel"></label>
         </div>
         <label>Authorized pickup people <span class="optional">one name per line</span><textarea id="childAuthorizedPeople" rows="3"></textarea></label>
-        <label>Critical transportation alert <span class="optional">only what a driver must know</span><textarea id="childCriticalAlert" rows="2"></textarea></label>
+        <label>Important information for the driver <span class="optional">only what a driver must know</span><textarea id="childCriticalAlert" rows="2"></textarea></label>
         <label>Pickup instructions<textarea id="childPickupInstructions" rows="3"></textarea></label>
         <label class="checkbox-row"><input id="childSafetyConsent" type="checkbox"><span><strong>Confirm these details may be shown to an assigned driver during the ride window</strong></span></label>
         <button class="primary-button" type="submit">Save child safety details</button>
@@ -49,7 +49,7 @@ if (!el('childSafetyDialog')) {
 
     <dialog id="driverSafetyDialog" class="modal safety-dialog">
       <form id="driverSafetyForm" class="dialog-form">
-        <div class="dialog-title"><div><span class="eyebrow">DRIVER + VEHICLE</span><h2>Driving readiness</h2></div><button id="driverSafetyClose" class="close-button" type="button" aria-label="Close">×</button></div>
+        <div class="dialog-title"><div><span class="eyebrow">DRIVER + VEHICLE</span><h2>Driver and vehicle details</h2></div><button id="driverSafetyClose" class="close-button" type="button" aria-label="Close">×</button></div>
         <div class="two-column-form">
           <label>Emergency contact name<input id="driverEmergencyName"></label>
           <label>Emergency contact phone<input id="driverEmergencyPhone" inputmode="tel"></label>
@@ -66,8 +66,8 @@ if (!el('childSafetyDialog')) {
           <label>Boosters<input id="vehicleBoosterCapacity" type="number" min="0" max="12" value="0"></label>
           <label>Car seats<input id="vehicleCarSeatCapacity" type="number" min="0" max="12" value="0"></label>
         </div>
-        <label class="checkbox-row"><input id="vehicleActive" type="checkbox" checked><span><strong>Vehicle is available for assignments</strong></span></label>
-        <button class="primary-button" type="submit">Save driving readiness</button>
+        <label class="checkbox-row"><input id="vehicleActive" type="checkbox" checked><span><strong>This vehicle may be used for rides</strong></span></label>
+        <button class="primary-button" type="submit">Save driver and vehicle details</button>
       </form>
     </dialog>`)
 }
@@ -122,7 +122,7 @@ function renderSafetySettingsCard() {
         <div><span class="eyebrow">FAMILY + VEHICLE SAFETY</span><h2>Transportation readiness</h2></div>
         <span class="status-pill ${profile.required && !driverReady && participant?.can_drive ? 'warning' : 'complete'}">${profile.required ? 'Required' : 'Recommended'}</span>
       </div>
-      <p class="meta">Sensitive details are not shown to Viewers. Assigned-driver access is limited to the operational ride window.</p>
+      <p class="meta">Private details are hidden from view-only members and shown to an assigned driver only while they are handling the ride.</p>
       <h3>Children or riders</h3>
       ${children.map(child => {
         const safety = child.safetyProfile || {}
@@ -144,10 +144,10 @@ renderGroupAdminPanel = function () {
   if (panel?.querySelector('[data-group-safety-requirement]')) return
   panel?.insertAdjacentHTML('beforeend', `
     <div class="card" data-group-safety-requirement>
-      <span class="eyebrow">SAFETY POLICY</span>
-      <h2>Driver readiness requirement</h2>
-      <p class="meta">When required, capacity-compatible vehicles and driver acknowledgements are checked before new driving assignments.</p>
-      <label class="checkbox-row"><input id="groupSafetyRequired" type="checkbox" ${state.activeGroup.safety_profiles_required ? 'checked' : ''}><span><strong>Require completed safety profiles</strong></span></label>
+      <span class="eyebrow">SAFETY</span>
+      <h2>Required driver and vehicle details</h2>
+      <p class="meta">Before giving someone a ride, KCP checks that the driver has confirmed their license and insurance and that the vehicle has suitable seats.</p>
+      <label class="checkbox-row"><input id="groupSafetyRequired" type="checkbox" ${state.activeGroup.safety_profiles_required ? 'checked' : ''}><span><strong>Require completed safety details</strong></span></label>
     </div>`)
 }
 

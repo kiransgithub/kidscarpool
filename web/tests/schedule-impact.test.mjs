@@ -26,27 +26,27 @@ test('quick actions copy times, select drivers and configure weekly or pickup-on
   assert.match(source, /outboundEnabled: false/)
 })
 
-test('preview calls the server impact engine before publishing', () => {
+test('schedule check calls the server change engine before making rides live', () => {
   assert.match(source, /kcp_prepare_schedule_change/)
   assert.match(source, /kcp_schedule_change_details/)
   assert.match(source, /activeScheduleChangeSetId/)
-  assert.match(source, /Generate a fresh preview and impact review before publishing/)
+  assert.match(source, /Check the latest rides before making the schedule live/)
   assert.match(source, /kcp_publish_schedule_plan_v3/)
 })
 
-test('impact view shows ride changes, conflicts and urgent acknowledgement requirement', () => {
-  assert.match(source, /PUBLISH IMPACT/)
+test('change view shows ride changes, overlaps and urgent driver confirmation', () => {
+  assert.match(source, /CHANGES TO REVIEW/)
   assert.match(source, /Time changes/)
   assert.match(source, /Driver changes/)
-  assert.match(source, /Cross-group conflicts/)
+  assert.match(source, /Rides that overlap another group/)
   assert.match(source, /Changes within 24 hours/)
   assert.match(migration, /cross_group_conflict/)
   assert.match(migration, /kcp_schedule_acknowledgements/)
 })
 
-test('affected drivers can acknowledge or flag schedule changes from Requests', () => {
-  assert.match(source, /Acknowledge/)
-  assert.match(source, /Flag a problem/)
+test('affected drivers can confirm or report schedule changes from Updates', () => {
+  assert.match(source, /Confirm changes/)
+  assert.match(source, /Report a problem/)
   assert.match(source, /kcp_acknowledge_schedule_change/)
   assert.match(source, /kcp_my_schedule_acknowledgements/)
 })

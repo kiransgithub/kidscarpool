@@ -12,7 +12,7 @@ test('child safety profile captures only transportation-critical details', () =>
   assert.match(migration, /authorized_pickup_people/)
   assert.match(migration, /seat_requirement/)
   assert.match(migration, /critical_alert/)
-  assert.match(source, /Critical transportation alert/)
+  assert.match(source, /Important information for the driver/)
   assert.match(source, /assigned driver during the ride window/)
 })
 

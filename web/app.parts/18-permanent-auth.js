@@ -257,8 +257,8 @@ renderSettings = function () {
   profileCard.insertAdjacentHTML('afterend', `
     <div class="card" data-account-security>
       <div class="group-card-head">
-        <div><span class="eyebrow">ACCOUNT ACCESS</span><h2>${verified ? 'Email account secured' : 'Temporary device account'}</h2></div>
-        <span class="status-pill ${verified ? 'complete' : 'warning'}">${verified ? 'Verified' : 'Action needed'}</span>
+        <div><span class="eyebrow">ACCOUNT ACCESS</span><h2>${verified ? 'Verified email account' : 'Account saved only on this device'}</h2></div>
+        <span class="status-pill ${verified ? 'complete' : 'warning'}">${verified ? 'Verified' : 'Add a recovery email'}</span>
       </div>
       <p class="meta">${verified
         ? `Signed in as ${escapeHTML(identity.email || '')}. You can use the same KCP account on multiple devices.`

@@ -28,7 +28,7 @@ if (!el('requestsView')) {
     <section id="moreView" class="view hidden" data-view="more">
       <div class="section-heading"><div><span class="eyebrow">ACCOUNT + GROUP TOOLS</span><h1>More</h1></div></div>
       <div class="more-grid">
-        <button class="more-card" data-more-view="leaderboard" type="button"><span>${primaryNavIcon('points')}</span><strong>Points</strong><small>Fairness and volunteer credit</small></button>
+        <button class="more-card" data-more-view="leaderboard" type="button"><span>${primaryNavIcon('points')}</span><strong>Driving summary</strong><small>Completed, volunteer and upcoming rides</small></button>
         <button class="more-card" data-more-view="calendar" type="button"><span>${primaryNavIcon('calendar')}</span><strong>Calendar</strong><small>Closures and exception dates</small></button>
         <button class="more-card" data-more-view="settings" type="button"><span>${primaryNavIcon('settings')}</span><strong>Settings</strong><small>Profile, availability and devices</small></button>
       </div>
@@ -113,7 +113,7 @@ function renderAgendaFocusCard(container, trip, heading, symbol) {
   container.className = `trip-focus-card ${heading.includes('ASSIGNMENT') ? 'pickup' : 'morning'}`
   if (!trip) {
     container.classList.add('empty')
-    container.innerHTML = `<div class="trip-symbol">${symbol}</div><div class="trip-label">${heading}</div><h2>No upcoming ride</h2><p class="meta">Published rides from all of your groups will appear here.</p>`
+    container.innerHTML = `<div class="trip-symbol">${symbol}</div><div class="trip-label">${heading}</div><h2>No upcoming ride</h2><p class="meta">Live rides from all of your groups will appear here.</p>`
     return
   }
 
@@ -152,7 +152,7 @@ renderSchedule = function () {
 
   list.innerHTML = rows.length
     ? rows.map(allGroupTripRow).join('')
-    : empty('No published rides match this group filter.')
+    : empty('No live rides match this group filter.')
 }
 
 function allGroupTripRow(trip) {

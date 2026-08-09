@@ -53,9 +53,9 @@ function renderOfflineStatus() {
 
   bar.className = `offline-status ${offline ? 'offline' : failed ? 'failed' : pending ? 'pending' : 'hidden'}`
   if (offline) {
-    bar.innerHTML = `<span aria-hidden="true">◌</span><strong>Offline</strong><span>${pending + failed ? `${pending + failed} ride action${pending + failed === 1 ? '' : 's'} saved on this device` : 'Previously loaded ride details remain available'}</span>`
+    bar.innerHTML = `<span aria-hidden="true">◌</span><strong>Offline</strong><span>${pending + failed ? `${pending + failed} ride change${pending + failed === 1 ? '' : 's'} waiting to sync` : 'Previously opened ride details are still available'}</span>`
   } else if (failed) {
-    bar.innerHTML = `<span aria-hidden="true">!</span><strong>Sync needs attention</strong><span>${failed} action${failed === 1 ? '' : 's'} could not be applied</span><button data-action="retry-offline-sync" type="button">Review</button>`
+    bar.innerHTML = `<span aria-hidden="true">!</span><strong>Some changes were not saved</strong><span>${failed} ride change${failed === 1 ? '' : 's'} could not sync</span><button data-action="retry-offline-sync" type="button">Review</button>`
   } else if (pending) {
     bar.innerHTML = `<span aria-hidden="true">↻</span><strong>Syncing</strong><span>${pending} saved action${pending === 1 ? '' : 's'} remaining</span>`
   }
@@ -75,9 +75,9 @@ function renderOfflineQueuePanel() {
 
   settings?.insertAdjacentHTML('beforeend', `
     <section class="card offline-queue-panel" data-offline-queue-panel>
-      <div class="group-card-head"><div><span class="eyebrow">OFFLINE ACTIONS</span><h2>Saved on this device</h2></div><span class="status-pill ${actions.some(action => action.status === 'failed') ? 'warning' : 'info'}">${actions.length}</span></div>
-      <p class="meta">Actions sync in their original order. A failed action blocks later actions for the same ride until you retry or discard it.</p>
-      ${actions.map(action => `<article class="offline-action-row ${action.status}"><div><strong>${escapeHTML(humanize(action.action))}</strong><span>${formatDateTime(action.deviceTimestamp)} · ${escapeHTML(action.status)}</span>${action.lastError ? `<small>${escapeHTML(sanitizeUserMessage(action.lastError))}</small>` : ''}</div><div class="button-row">${action.status === 'failed' ? `<button class="action-button" data-action="retry-one-offline-action" data-offline-action-id="${action.id}" type="button">Retry</button>` : ''}<button class="action-button" data-action="discard-offline-action" data-offline-action-id="${action.id}" type="button">Discard</button></div></article>`).join('')}
+      <div class="group-card-head"><div><span class="eyebrow">WAITING TO SYNC</span><h2>Changes saved on this device</h2></div><span class="status-pill ${actions.some(action => action.status === 'failed') ? 'warning' : 'info'}">${actions.length}</span></div>
+      <p class="meta">Changes are sent in order. If one cannot sync, later changes to the same ride will wait until you retry or remove it.</p>
+      ${actions.map(action => `<article class="offline-action-row ${action.status}"><div><strong>${escapeHTML(humanize(action.action))}</strong><span>${formatDateTime(action.deviceTimestamp)} · ${escapeHTML(action.status)}</span>${action.lastError ? `<small>${escapeHTML(sanitizeUserMessage(action.lastError))}</small>` : ''}</div><div class="button-row">${action.status === 'failed' ? `<button class="action-button" data-action="retry-one-offline-action" data-offline-action-id="${action.id}" type="button">Retry</button>` : ''}<button class="action-button" data-action="discard-offline-action" data-offline-action-id="${action.id}" type="button">Remove change</button></div></article>`).join('')}
       <button class="primary-small" data-action="retry-offline-sync" type="button" ${navigator.onLine ? '' : 'disabled'}>Sync now</button>
     </section>`)
 }
@@ -87,7 +87,7 @@ loadDriverModeSnapshot = async function () {
   if (!navigator.onLine) {
     const cached = await loadDriverSnapshot(driverModeTripId)
     if (!cached) {
-      el('driverModeContent').innerHTML = '<div class="driver-mode-empty"><h2>Ride details are not available offline</h2><p>Open this ride once while online before relying on offline Driver mode.</p></div>'
+      el('driverModeContent').innerHTML = '<div class="driver-mode-empty"><h2>Ride details are not available offline</h2><p>Open this ride once while online before using the ride checklist offline.</p></div>'
       el('driverModeFooter').innerHTML = ''
       return
     }
@@ -175,7 +175,7 @@ window.addEventListener('click', async event => {
   await cacheDriverSnapshot(driverModeTripId,driverModeSnapshot)
   await loadOfflineQueueState()
   renderDriverMode()
-  toast('Action saved offline')
+  toast('Change saved on this device and waiting to sync')
 }, { capture: true })
 
 function applyOfflineActionToSnapshot(action) {

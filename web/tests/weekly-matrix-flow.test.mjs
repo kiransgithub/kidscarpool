@@ -22,16 +22,16 @@ test('the compact schedule matrix always exposes Monday through Sunday', async (
   assert.match(source, /data-week-matrix-field="outboundTime"/)
   assert.match(source, /data-week-matrix-field="returnTime"/)
   assert.match(source, /scheduleAdvancedRideRules/)
-  assert.match(source, /Advanced ride rules/)
+  assert.match(source, /More ride options/)
 })
 
 test('driver confirmation requires an explicit yes before preview generation', async () => {
   const source = await text('web/app.parts/12-weekly-matrix-flow.js')
 
   assert.match(source, /scheduleDriversConfirmDialog/)
-  assert.match(source, /Are all intended drivers included\?/)
-  assert.match(source, /No, review drivers/)
-  assert.match(source, /Yes, generate preview/)
+  assert.match(source, /Is everyone who may drive included\?/)
+  assert.match(source, /Review drivers/)
+  assert.match(source, /Yes, check schedule/)
   assert.match(source, /await kcpWeeklyPreviousAdvanceScheduleBuilder\(\)/)
   assert.match(source, /selected\.length.*activeDrivers\.length/s)
   assert.match(source, /excluded\.length/)
@@ -55,9 +55,9 @@ test('parent availability shows all seven days and official published times', as
     text('web/app.parts/13-published-availability.js')
   ])
 
-  assert.match(matrixSource, /My ride availability/)
+  assert.match(matrixSource, /Rides I can drive/)
   assert.match(matrixSource, /WEEKDAYS\.map\(day => availabilityWeekRow/)
-  assert.match(publishedSource, /currently published trips/i)
+  assert.match(publishedSource, /live schedule/i)
   assert.match(publishedSource, /publishedWeeklyTripTimes/)
   assert.match(publishedSource, /for \(const trip of state\.trips/)
   assert.match(publishedSource, /before its first publication/i)
@@ -65,7 +65,7 @@ test('parent availability shows all seven days and official published times', as
   assert.match(publishedSource, /WEEKDAYS\.map\(day => publishedAvailabilityRow/)
   assert.match(publishedSource, /data-action="toggle-weekday"/)
   assert.match(publishedSource, /data-action="submit-constraints"/)
-  assert.match(publishedSource, /Times are read-only here/)
+  assert.match(publishedSource, /Times cannot be changed here/)
 })
 
 test('weekly matrix styles prevent sticky overlap and preserve dark-mode contrast', async () => {

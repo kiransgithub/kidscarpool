@@ -34,29 +34,29 @@ renderLeaderboard = function () {
   const list = el('leaderboardList')
   if (!list) return
   const heading = el('leaderboardView')?.querySelector('.section-heading h1')
-  if (heading) heading.textContent = 'Fairness & participation'
+  if (heading) heading.textContent = 'Driving summary'
 
   if (!state.activeGroup) {
     list.innerHTML = empty('Choose a group to review participation.')
     return
   }
   if (kcpAccess().isViewer) {
-    list.innerHTML = empty('Participation details are available to driving members and group managers.')
+    list.innerHTML = empty('The driving summary is available to drivers and group managers.')
     return
   }
 
   const rows = state.fairnessRows || []
   if (!rows.length) {
-    list.innerHTML = empty('Complete confirmed rides to begin the fairness ledger.')
+    list.innerHTML = empty('Completed rides will appear in the driving history.')
     return
   }
 
   const maxUnits = Math.max(...rows.map(row => Number(row.fairness_units || 0)), 1)
   list.innerHTML = `
     <section class="card fairness-explainer">
-      <span class="eyebrow">WORKLOAD, NOT A SCORE</span>
-      <h2>How fairness is measured</h2>
-      <p>Completed rides are the base. Estimated time and the number of children transported add modest workload weight. Volunteer points are displayed separately and never change safety or assignment eligibility.</p>
+      <span class="eyebrow">HOW DRIVING IS SHARED</span>
+      <h2>How contributions are counted</h2>
+      <p>Each completed ride counts. Longer rides and rides with more children count a little more. Recognition points are separate and never decide who is allowed to drive.</p>
     </section>
     <section class="fairness-list">
       ${rows.map((row, index) => fairnessRow(row, index, maxUnits)).join('')}
@@ -67,9 +67,11 @@ function fairnessRow(row, index, maxUnits) {
   const isCurrent = row.user_id === state.session?.user?.id
   const width = Math.max(3, Math.round(Number(row.fairness_units || 0) / maxUnits * 100))
   const balance = Number(row.balance_delta || 0)
-  const balanceText = Math.abs(balance) < 0.001
-    ? 'At group average'
-    : `${balance > 0 ? '+' : ''}${balance.toFixed(2)} workload units vs average`
+  const balanceText = Math.abs(balance) < 0.15
+    ? 'About the same as the group'
+    : balance > 0
+      ? 'More driving than the group average'
+      : 'Less driving than the group average'
 
   return `<article class="fairness-row ${isCurrent ? 'current-user' : ''}">
     <div class="fairness-rank">${index + 1}</div>
@@ -81,11 +83,11 @@ function fairnessRow(row, index, maxUnits) {
         <span><strong>${row.volunteer_rides}</strong> volunteer</span>
         <span><strong>${row.upcoming_assigned}</strong> upcoming</span>
         <span><strong>${formatFairnessMinutes(row.estimated_minutes)}</strong> estimated</span>
-        <span><strong>${row.children_transported}</strong> child-rides</span>
+        <span><strong>${row.children_transported}</strong> children carried</span>
       </div>
-      <p class="fairness-balance">${escapeHTML(balanceText)} · ${Number(row.participation_share || 0).toFixed(1)}% of weighted completed workload</p>
+      <p class="fairness-balance">${escapeHTML(balanceText)} · ${Number(row.participation_share || 0).toFixed(1)}% of the group's completed driving</p>
     </div>
-    <div class="fairness-score"><strong>${Number(row.fairness_units || 0).toFixed(2)}</strong><small>workload</small>${row.points_visible ? `<span>${row.points} pts</span>` : ''}</div>
+    <div class="fairness-score"><strong>${Number(row.fairness_units || 0).toFixed(2)}</strong><small>contribution</small>${row.points_visible ? `<span>${row.points} pts</span>` : ''}</div>
   </article>`
 }
 
@@ -128,12 +130,12 @@ renderGroupAdminPanel = function () {
   panel?.insertAdjacentHTML('beforeend', `
     <section class="card" data-participation-settings>
       <span class="eyebrow">PARTICIPATION</span>
-      <h2>Fairness and points</h2>
-      <p class="meta">The fairness ledger always tracks operational workload. Public points are optional.</p>
-      <label class="checkbox-row"><input id="groupPointsEnabled" type="checkbox" ${state.activeGroup.points_enabled !== false ? 'checked' : ''}><span><strong>Award points after confirmed completion</strong><small>10 scheduled · 20 volunteer</small></span></label>
-      <label class="checkbox-row"><input id="groupPublicLeaderboard" type="checkbox" ${state.activeGroup.public_leaderboard_enabled !== false ? 'checked' : ''}><span><strong>Show group participation to driving members</strong><small>When off, each parent sees only their own summary; Owners/Admins retain the operational view.</small></span></label>
-      <details class="fairness-advanced"><summary>Fairness weighting</summary><div class="two-column-form"><label>Time weight<input id="groupFairnessTimeWeight" type="number" min="0" max="10" step="0.05" value="${Number(state.activeGroup.fairness_time_weight ?? 0.25)}"></label><label>Child-load weight<input id="groupFairnessChildWeight" type="number" min="0" max="10" step="0.01" value="${Number(state.activeGroup.fairness_child_weight ?? 0.05)}"></label></div><p class="meta">Base = one unit per completed ride. Time and child-load weights add context without changing points.</p></details>
-      <button class="primary-small" data-action="save-participation-settings" type="button">Save participation settings</button>
+      <h2>Driving contributions</h2>
+      <p class="meta">KCP keeps a private driving history. Recognition points and group comparisons are optional.</p>
+      <label class="checkbox-row"><input id="groupPointsEnabled" type="checkbox" ${state.activeGroup.points_enabled !== false ? 'checked' : ''}><span><strong>Give recognition points for completed rides</strong><small>10 scheduled · 20 volunteer</small></span></label>
+      <label class="checkbox-row"><input id="groupPublicLeaderboard" type="checkbox" ${state.activeGroup.public_leaderboard_enabled !== false ? 'checked' : ''}><span><strong>Let drivers see the group driving summary</strong><small>When off, each driver sees only their own summary; group managers can still see the full history.</small></span></label>
+      <details class="fairness-advanced"><summary>Advanced: how driving is counted</summary><div class="two-column-form"><label>Extra credit for longer rides<input id="groupFairnessTimeWeight" type="number" min="0" max="10" step="0.05" value="${Number(state.activeGroup.fairness_time_weight ?? 0.25)}"></label><label>Extra credit for carrying more children<input id="groupFairnessChildWeight" type="number" min="0" max="10" step="0.01" value="${Number(state.activeGroup.fairness_child_weight ?? 0.05)}"></label></div><p class="meta">Every completed ride starts equally. These settings add a small amount for time and number of children. They do not change recognition points or who may drive.</p></details>
+      <button class="primary-small" data-action="save-participation-settings" type="button">Save driving-summary settings</button>
     </section>`)
 }
 

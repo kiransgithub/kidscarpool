@@ -94,7 +94,7 @@ renderHome = function () {
       <div class="metric"><strong>${openCovers}</strong><small>Open covers</small></div>
       <div class="metric"><strong>${pending}</strong><small>Pending changes</small></div>
     </div>
-    <p class="meta" style="margin-bottom:0">Signed in as <strong>${escapeHTML(capitalize(access.role))}</strong>. Published schedule version ${state.activeGroup.current_schedule_version || 0}.</p>`
+    <p class="meta" style="margin-bottom:0">Signed in as <strong>${escapeHTML(access.role === 'admin' ? 'Group manager' : access.role === 'viewer' ? 'View-only member' : capitalize(access.role))}</strong>. Live schedule ${state.activeGroup.current_schedule_version || 0}.</p>`
 }
 
 renderFocusTrip = function (container, trip, label, symbol) {
@@ -103,7 +103,7 @@ renderFocusTrip = function (container, trip, label, symbol) {
 
   if (!trip) {
     container.classList.add('empty')
-    container.innerHTML = `<div class="trip-symbol">${symbol}</div><div class="trip-label">${escapeHTML(label)}</div><h2>No upcoming ride</h2><p class="meta">An Owner or Admin can publish a recurring schedule.</p>`
+    container.innerHTML = `<div class="trip-symbol">${symbol}</div><div class="trip-label">${escapeHTML(label)}</div><h2>No upcoming ride</h2><p class="meta">A group manager can set the weekly schedule.</p>`
     return
   }
 
@@ -183,7 +183,7 @@ renderConstraints = function () {
     return
   }
   if (!access.canDrive) {
-    card.innerHTML = '<h2>Ride availability</h2><p class="meta">This membership is read-only. Owners and Admins can change the role or driving permission.</p>'
+    card.innerHTML = '<h2>Ride availability</h2><p class="meta">This is a view-only membership. A group manager can change the access level or driving permission.</p>'
     return
   }
   kcpDatabasePreviousRenderConstraints()
@@ -208,7 +208,7 @@ renderCalendar = function () {
     analytics.innerHTML = ''
     actions.innerHTML = `
       <h2>Calendar and exception dates</h2>
-      <p class="meta">A calendar is optional. The published recurring schedule remains active without one.</p>
+      <p class="meta">A calendar is optional. The live weekly schedule continues without one.</p>
       ${access.isAdmin ? `
         <label>Optional calendar PDF<input id="calendarFile" type="file" accept="application/pdf"></label>
         <button class="primary-button" data-action="upload-calendar" type="button">Store calendar file</button>
@@ -235,7 +235,7 @@ uploadCalendar = async function () {
   const file = el('calendarFile')?.files?.[0]
   if (!file) throw new Error('Choose a PDF first.')
   if (file.type !== 'application/pdf') throw new Error('The calendar source must be a PDF.')
-  if (!state.activeGroup || !kcpAccess().isAdmin) throw new Error('Owner or Admin role required.')
+  if (!state.activeGroup || !kcpAccess().isAdmin) throw new Error('Group manager access is required.')
 
   await runAction(async () => {
     const hash = await sha256(file)

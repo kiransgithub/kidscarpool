@@ -5,17 +5,17 @@ import fs from 'node:fs'
 const source = fs.readFileSync('web/app.parts/32-fairness-ledger.js', 'utf8')
 const migration = fs.readFileSync('supabase/migrations/202608080015_kcp_fairness_gamification.sql', 'utf8')
 
-test('fairness is presented as workload rather than a competitive score', () => {
-  assert.match(source, /WORKLOAD, NOT A SCORE/)
-  assert.match(source, /Completed rides are the base/)
+test('driving contributions are explained without technical scoring language', () => {
+  assert.match(source, /HOW DRIVING IS SHARED/)
+  assert.match(source, /Each completed ride counts/)
   assert.match(source, /estimated_minutes/)
   assert.match(source, /children_transported/)
   assert.match(migration, /fairness_time_weight/)
   assert.match(migration, /fairness_child_weight/)
 })
 
-test('operational fairness and gamification remain separate', () => {
-  assert.match(source, /Volunteer points are displayed separately/)
+test('driving contributions and recognition points remain separate', () => {
+  assert.match(source, /Recognition points are separate/)
   assert.match(migration, /points_enabled/)
   assert.match(migration, /public_leaderboard_enabled/)
   assert.match(migration, /if not enabled then return 0/)
@@ -34,8 +34,8 @@ test('private participation returns only the current parent while managers retai
   assert.match(migration, /totals\.user_id = auth\.uid\(\)/)
 })
 
-test('Viewer receives no operational fairness rows', () => {
+test('Viewer receives no private group-driving rows', () => {
   assert.match(source, /kcpAccess\(\)\.isViewer/)
-  assert.match(source, /Participation details are available to driving members/)
+  assert.match(source, /driving summary is available to drivers/i)
   assert.match(migration, /if caller_role = 'viewer' then return/)
 })

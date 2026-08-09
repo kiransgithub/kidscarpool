@@ -14,8 +14,8 @@ renderConstraints = function () {
   const weeklyTimes = publishedWeeklyTripTimes()
 
   card.innerHTML = `
-    <h2>My ride availability</h2>
-    <p class="meta">These times come from the currently published trips. Select the rides you can drive; only an Owner or Admin changes the official schedule.</p>
+    <h2>Rides I can drive</h2>
+    <p class="meta">These times come from the live schedule. Select the rides you can drive; only a group manager can change the official schedule.</p>
     <div class="availability-week-matrix" role="table" aria-label="Weekly driver availability">
       <div class="availability-week-head" role="row">
         <span role="columnheader">Day</span>
@@ -24,11 +24,11 @@ renderConstraints = function () {
       </div>
       ${WEEKDAYS.map(day => publishedAvailabilityRow(day, weeklyTimes.get(day.value))).join('')}
     </div>
-    <p class="availability-time-note">Times are read-only here. Use Notes for a narrower window or one-time exception.</p>
+    <p class="availability-time-note">Times cannot be changed here. Use Notes if you are available for only part of the time or need a one-time change.</p>
     <label style="margin-top:12px">Notes
       <textarea id="constraintNotes" rows="3" placeholder="Example: Thursday preferred; unavailable after 7:30 PM">${escapeHTML(state.constraintDraft.notes)}</textarea>
     </label>
-    <button class="primary-button" data-action="submit-constraints" type="button" style="margin-top:12px">Submit update request</button>`
+    <button class="primary-button" data-action="submit-constraints" type="button" style="margin-top:12px">Send availability change</button>`
 }
 
 function publishedLegLabel(leg) {

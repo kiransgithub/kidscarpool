@@ -35,7 +35,7 @@ document.addEventListener('click', event => {
   if (KCP_ADMIN_ACTIONS.has(action) && !access.isAdmin) {
     event.preventDefault()
     event.stopImmediatePropagation()
-    toast('Owner or Admin role required.', true)
+    toast('Group manager access is required.', true)
   }
 }, { capture: true })
 
@@ -60,5 +60,5 @@ document.addEventListener('change', event => {
   if (!roleControl || kcpAccess().isAdmin) return
   event.preventDefault()
   event.stopImmediatePropagation()
-  toast('Owner or Admin role required.', true)
+  toast('Group manager access is required.', true)
 }, { capture: true })

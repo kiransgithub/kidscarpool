@@ -46,7 +46,7 @@ renderHome = function () {
     el('homeAlerts').innerHTML = `
       <span class="eyebrow">READ-ONLY VIEW</span>
       <h2>${nextRide ? 'Your group schedule is current' : 'No upcoming rides'}</h2>
-      <p class="meta">View published rides and assigned drivers. Administrative changes and internal schedule versions are intentionally hidden.</p>
+      <p class="meta">View live rides and assigned drivers. Group-management settings are hidden.</p>
       <button class="secondary-button" data-nav="schedule" type="button">View schedule</button>`
     updateRoleSpecificNavigation()
     return
@@ -80,7 +80,7 @@ renderHome = function () {
         <div class="metric"><strong>${pendingChanges.length}</strong><small>Pending changes</small></div>
         <div class="metric"><strong>${pendingInvites}</strong><small>Pending invites</small></div>
       </div>
-      ${total ? '<button class="secondary-button" data-nav="requests" type="button">Review requests</button>' : '<p class="meta">No operational action is waiting across the groups you manage.</p>'}`
+      ${total ? '<button class="secondary-button" data-nav="requests" type="button">Review updates</button>' : '<p class="meta">No update needs attention across the groups you manage.</p>'}`
   } else {
     const ownRequests = state.allGroupRequests.filter(item =>
       item.requested_by === state.session?.user?.id
@@ -156,7 +156,7 @@ function renderRoleSpecificGroupPanel() {
       <span class="eyebrow">${role === 'viewer' ? 'READ-ONLY GROUP' : 'YOUR MEMBERSHIP'}</span>
       <h2>${escapeHTML(state.activeGroup.name)}</h2>
       <p class="meta">${role === 'viewer'
-        ? 'You can view published rides and assigned drivers. Group administration and internal change metrics are hidden.'
+        ? 'You can view live rides and assigned drivers. Group-management settings are hidden.'
         : 'Use Schedule for rides, Requests for coverage, and Settings for your availability.'}</p>
       <div class="button-row">
         <button class="primary-small" data-nav="schedule" type="button">View schedule</button>

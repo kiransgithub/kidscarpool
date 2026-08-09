@@ -8,7 +8,7 @@ const worker = fs.readFileSync('web/service-worker-v24.js', 'utf8')
 
 test('viewer Home is read-only and omits internal change and version metrics', () => {
   assert.match(source, /READ-ONLY VIEW/)
-  assert.match(source, /Administrative changes and internal schedule versions are intentionally hidden/)
+  assert.match(source, /Group-management settings are hidden/)
   assert.match(source, /requestsButton\.classList\.toggle\('hidden', portfolio\.viewerOnly\)/)
   const viewerStart = source.indexOf("if (portfolio.viewerOnly)", source.indexOf('renderHome = function'))
   const viewerBlock = source.slice(viewerStart, source.indexOf("if (portfolio.managedGroups.length)", viewerStart))

@@ -7,7 +7,7 @@ const migration = fs.readFileSync('supabase/migrations/202608080010_kcp_child_ab
 const worker = fs.readFileSync('web/service-worker-v24.js', 'utf8')
 
 test('parent can report one ride or a date range with common absence reasons', () => {
-  assert.match(source, /Report child unavailable/)
+  assert.match(source, /Child is not riding/)
   assert.match(source, /Date or date range/)
   assert.match(source, /picked_up_separately/)
   assert.match(source, /student_hours/)

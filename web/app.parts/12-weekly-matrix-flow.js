@@ -93,8 +93,8 @@ renderConstraints = function () {
   const scheduleByDay = sessionsByWeekday(state.scheduleBuilder?.sessions || [])
 
   card.innerHTML = `
-    <h2>My ride availability</h2>
-    <p class="meta">The times below come from the published recurring schedule. Select the rides you can drive; changing official times remains an Owner/Admin action.</p>
+    <h2>Rides I can drive</h2>
+    <p class="meta">These times come from the live schedule. Select the rides you can drive; only a group manager can change the official times.</p>
     <div class="availability-week-matrix" role="table" aria-label="Weekly driver availability">
       <div class="availability-week-head" role="row">
         <span role="columnheader">Day</span>
@@ -103,11 +103,11 @@ renderConstraints = function () {
       </div>
       ${WEEKDAYS.map(day => availabilityWeekRow(day, scheduleByDay.get(day.value) || [])).join('')}
     </div>
-    <p class="availability-time-note">Times are informational here. Use Notes for a narrower availability window or an exception.</p>
+    <p class="availability-time-note">Times cannot be changed here. Use Notes if you are available for only part of the time or need a one-time change.</p>
     <label style="margin-top:12px">Notes
       <textarea id="constraintNotes" rows="3" placeholder="Example: Thursday preferred; unavailable after 7:30 PM">${escapeHTML(state.constraintDraft.notes)}</textarea>
     </label>
-    <button class="primary-button" data-action="submit-constraints" type="button" style="margin-top:12px">Submit update request</button>`
+    <button class="primary-button" data-action="submit-constraints" type="button" style="margin-top:12px">Send availability change</button>`
 }
 
 // Existing admin summaries must understand Saturday and Sunday as well.
@@ -175,7 +175,7 @@ function prepareWeeklyMatrixStructure() {
     details.id = 'scheduleAdvancedRideRules'
     details.className = 'schedule-advanced weekly-advanced-rides'
     details.innerHTML = `
-      <summary>Advanced ride rules <span>Multiple rides, multi-week repeats and overnight returns</span></summary>
+      <summary>More ride options <span>Extra rides, alternating weeks and next-day returns</span></summary>
       <div class="weekly-advanced-content"></div>`
     const content = details.querySelector('.weekly-advanced-content')
     list.insertAdjacentElement('beforebegin', details)
@@ -193,8 +193,8 @@ function renderWeeklyScheduleMatrix() {
   const scheduleMap = sessionsByWeekday(scheduleDraftSessions)
   container.innerHTML = `
     <div class="weekly-matrix-intro">
-      <strong>Weekly ride times</strong>
-      <span>Enable a day, then set its drop-off and pickup. Saturday and Sunday are available like any other day.</span>
+      <strong>Days and ride times</strong>
+      <span>Turn on a day, then enter its drop-off and pickup times. Weekend rides work the same way.</span>
     </div>
     <div class="weekly-matrix-head" role="row">
       <span role="columnheader">Day</span>
@@ -341,14 +341,14 @@ function ensureDriverConfirmationDialog() {
     <dialog id="scheduleDriversConfirmDialog" class="modal driver-confirm-dialog">
       <div class="dialog-form">
         <div class="dialog-title">
-          <div><span class="eyebrow">CONFIRM DRIVERS</span><h2>Are all intended drivers included?</h2></div>
+          <div><span class="eyebrow">CHECK DRIVERS</span><h2>Is everyone who may drive included?</h2></div>
           <button id="scheduleDriversConfirmClose" class="close-button" type="button" aria-label="Close">×</button>
         </div>
         <p id="scheduleDriversConfirmMessage" class="meta"></p>
         <div id="scheduleDriversConfirmList" class="driver-confirm-list"></div>
         <div class="driver-confirm-actions">
-          <button id="scheduleDriversReview" class="secondary-button" type="button">No, review drivers</button>
-          <button id="scheduleDriversProceed" class="primary-button" type="button">Yes, generate preview</button>
+          <button id="scheduleDriversReview" class="secondary-button" type="button">Review drivers</button>
+          <button id="scheduleDriversProceed" class="primary-button" type="button">Yes, check schedule</button>
         </div>
       </div>
     </dialog>`)
@@ -376,13 +376,13 @@ function openDriverConfirmationDialog() {
   const strategy = el('scheduleStrategy')?.value
 
   if (strategy !== 'manual' && !selected.length) {
-    toast('Select at least one driver before previewing.', true)
+    toast('Select at least one driver before checking the schedule.', true)
     return
   }
 
   el('scheduleDriversConfirmMessage').textContent = excluded.length
-    ? `${selected.length} of ${activeDrivers.length} active drivers are selected. Continue only if the excluded drivers should not receive assignments.`
-    : `All ${activeDrivers.length} active driver${activeDrivers.length === 1 ? '' : 's'} are included. Generate the schedule preview?`
+    ? `${selected.length} of ${activeDrivers.length} available drivers are selected. Anyone not included will not be given rides.`
+    : `All ${activeDrivers.length} available driver${activeDrivers.length === 1 ? '' : 's'} are included. Check the schedule now?`
 
   el('scheduleDriversConfirmList').innerHTML = `
     <div class="driver-confirm-group">
@@ -397,7 +397,7 @@ function renderCurrentPreviewWeek() {
   const container = el('schedulePreview')
   if (!container) return
   if (!kcpPreviewWeekGroups.length) {
-    container.innerHTML = '<div class="empty-card compact"><p>No trips were generated. Check the date range and weekly ride times.</p></div>'
+    container.innerHTML = '<div class="empty-card compact"><p>No rides were created. Check the date range and weekly ride times.</p></div>'
     return
   }
 

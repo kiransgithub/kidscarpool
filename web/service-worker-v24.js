@@ -1,9 +1,10 @@
-const CACHE = 'kcp-community-v24-offline-accessibility'
+const CACHE = 'kcp-community-v24-offline-accessibility-v25-navigation-language'
 const SHELL = [
   './',
   './index.html',
   './styles.css',
   './fixes.css',
+  './page-navigation.css',
   './generic-schedule.css',
   './schedule-builder-usability.css',
   './weekly-matrix-flow.css',

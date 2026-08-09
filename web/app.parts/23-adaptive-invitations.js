@@ -26,7 +26,7 @@ function installAdaptiveInvitationFields() {
     <div id="inviteRoleHelp" class="role-help"></div>
     <label id="inviteCanDriveRow" class="checkbox-row">
       <input id="inviteCanDrive" type="checkbox" checked>
-      <span><strong>Can be assigned to drive</strong><small>Turn this off for a non-driving Parent or Admin.</small></span>
+      <span><strong>May be given rides to drive</strong><small>Turn this off for a family member or group manager who will not drive.</small></span>
     </label>
     <label>Invitation expires
       <select id="inviteExpiresDays">
@@ -66,8 +66,8 @@ function updateAdaptiveInvitationFields() {
   const help = el('inviteRoleHelp')
   if (help) {
     help.innerHTML = ({
-      viewer: '<strong>Viewer</strong><span>Read-only schedule access. Child information and driving availability are not required.</span>',
-      admin: '<strong>Admin</strong><span>Can manage invitations and schedules. Child information and driving are optional.</span>',
+      viewer: '<strong>View-only member</strong><span>Can see the schedule but cannot change it. Child and driving information are not required.</span>',
+      admin: '<strong>Group manager</strong><span>Can manage invitations and schedules. Child and driving information are optional.</span>',
       parent: '<strong>Parent</strong><span>Participates in the carpool. Add the child or rider and choose whether this member can drive.</span>'
     })[role]
   }
@@ -118,12 +118,12 @@ invitationRow = function (invitation) {
     <div>
       <strong>${escapeHTML(invitation.invited_parent_name)}</strong>
       <span class="meta">${escapeHTML(capitalize(role))} · ${child} · expires ${formatDateTime(invitation.expires_at)}</span>
-      <span class="meta">${invitation.can_drive && role !== 'viewer' ? 'Driving enabled' : 'No driving assignments'} · ${escapeHTML(capitalize(invitation.status))}</span>
+      <span class="meta">${invitation.can_drive && role !== 'viewer' ? 'May drive' : 'Will not be given rides'} · ${escapeHTML(capitalize(invitation.status))}</span>
     </div>
     ${pending ? `<div class="button-row">
       <button class="action-button" data-action="share-invite" data-invite-id="${invitation.id}" type="button">Share</button>
       <button class="action-button" data-action="resend-invite" data-invite-id="${invitation.id}" type="button">New code</button>
-      <button class="action-button orange" data-action="revoke-invite" data-invite-id="${invitation.id}" type="button">Revoke</button>
+      <button class="action-button orange" data-action="revoke-invite" data-invite-id="${invitation.id}" type="button">Cancel invitation</button>
     </div>` : `<span class="status-pill ${invitation.status === 'accepted' ? 'complete' : 'warning'}">${escapeHTML(capitalize(invitation.status))}</span>`}
   </div>`
 }
@@ -175,7 +175,7 @@ document.addEventListener('click', async event => {
   const revoke = event.target.closest('[data-action="revoke-invite"]')
   if (revoke) {
     event.preventDefault()
-    if (!confirm('Revoke this invitation? Its current link and code will stop working.')) return
+    if (!confirm('Cancel this invitation? Its current link and code will stop working.')) return
     await runAction(async () => {
       const { error } = await supabase.rpc('kcp_revoke_invitation', {
         p_invitation_id: revoke.dataset.inviteId
@@ -230,7 +230,7 @@ async function openInvitationLink(token) {
 
   const { data, error } = await supabase.rpc('kcp_invitation_preview', { p_token: normalized })
   if (error || !data?.[0]) {
-    el('invitationAcceptPreview').innerHTML = '<strong>Invitation unavailable</strong><span>Ask the group Owner or Admin for a current link.</span>'
+    el('invitationAcceptPreview').innerHTML = '<strong>Invitation unavailable</strong><span>Ask the group manager for a current link.</span>'
     el('invitationAcceptSubmit').disabled = true
     return
   }
@@ -242,7 +242,7 @@ async function openInvitationLink(token) {
   el('invitationAcceptPreview').innerHTML = `
     <strong>${escapeHTML(preview.group_name)}</strong>
     <span>${escapeHTML(capitalize(preview.role))}${preview.child_name ? ` · ${escapeHTML(preview.child_name)}` : ''}</span>
-    <span>${preview.can_drive ? 'Driving assignments enabled' : 'Read-only or non-driving membership'}</span>
+    <span>${preview.can_drive ? 'You may be given rides to drive' : 'You will not be given rides to drive'}</span>
     ${preview.email_bound ? '<span class="status-pill info">Verified invited email required</span>' : ''}`
 }
 
@@ -271,7 +271,7 @@ el('invitationAcceptForm')?.addEventListener('submit', async event => {
 })
 
 el('invitationDecline')?.addEventListener('click', async () => {
-  if (!confirm('Decline this carpool invitation? The Owner will see that you declined.')) return
+  if (!confirm('Decline this carpool invitation? The group owner will see your response.')) return
   await runAction(async () => {
     const { error } = await supabase.rpc('kcp_decline_invitation', {
       p_token: el('invitationAcceptToken').value

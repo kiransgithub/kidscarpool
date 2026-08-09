@@ -21,10 +21,10 @@ let kcpScheduleMaxUnlockedStep = 3
 let kcpSchedulePreviewFresh = false
 
 const KCP_SCHEDULE_STEPS = [
-  { number: 1, label: 'Basics' },
+  { number: 1, label: 'Dates' },
   { number: 2, label: 'Rides' },
   { number: 3, label: 'Drivers' },
-  { number: 4, label: 'Preview' }
+  { number: 4, label: 'Check' }
 ]
 
 prepareExplicitDialogClose(
@@ -97,7 +97,8 @@ if (kcpUsabilityScheduleDialog) {
     if (action === 'schedule-step-back') {
       event.preventDefault()
       event.stopImmediatePropagation()
-      setScheduleBuilderStep(Math.max(1, kcpScheduleStep - 1))
+      if (kcpScheduleStep === 1) kcpUsabilityScheduleDialog.close('cancel')
+      else setScheduleBuilderStep(kcpScheduleStep - 1)
       return
     }
 
@@ -123,7 +124,7 @@ el('publishSchedulePlan')?.addEventListener('click', event => {
   if (kcpSchedulePreviewFresh) return
   event.preventDefault()
   event.stopImmediatePropagation()
-  toast('Preview the latest changes before publishing.', true)
+  toast('Check the latest changes before making the schedule live.', true)
   setScheduleBuilderStep(3)
 }, { capture: true })
 
@@ -209,7 +210,7 @@ function simplifyScheduleBasics() {
   const details = document.createElement('details')
   details.id = 'scheduleBasicsAdvanced'
   details.className = 'schedule-advanced'
-  details.innerHTML = '<summary>Names and automation <span>Optional settings</span></summary><div class="schedule-advanced-grid"></div>'
+  details.innerHTML = '<summary>Labels and automatic completion <span>Optional settings</span></summary><div class="schedule-advanced-grid"></div>'
   const advancedGrid = details.querySelector('.schedule-advanced-grid')
   advancedLabels.forEach(label => advancedGrid.appendChild(label))
   grid.insertAdjacentElement('afterend', details)
@@ -230,7 +231,7 @@ function simplifyRenderedSessionCards() {
 
     const details = document.createElement('details')
     details.className = 'schedule-session-advanced schedule-advanced'
-    details.innerHTML = '<summary>More options <span>Name, repeat interval and overnight return</span></summary><div class="schedule-advanced-grid"></div>'
+    details.innerHTML = '<summary>More options <span>Ride name, repeating pattern and next-day return</span></summary><div class="schedule-advanced-grid"></div>'
     const advancedGrid = details.querySelector('.schedule-advanced-grid')
     advancedLabels.forEach(label => advancedGrid.appendChild(label))
     grid.insertAdjacentElement('afterend', details)
@@ -255,7 +256,7 @@ function simplifyAssignmentOptions() {
       const details = document.createElement('details')
       details.id = 'scheduleRotationAdvanced'
       details.className = 'schedule-advanced'
-      details.innerHTML = '<summary>Rotation options <span>Anchor date and skipped-week behavior</span></summary><div class="schedule-advanced-grid"></div>'
+      details.innerHTML = '<summary>Driver-order options <span>Starting date and weeks without rides</span></summary><div class="schedule-advanced-grid"></div>'
       const advancedGrid = details.querySelector('.schedule-advanced-grid')
       remainingLabels.forEach(label => advancedGrid.appendChild(label))
       fixedRow?.insertAdjacentElement('afterend', details)
@@ -283,6 +284,9 @@ function prepareScheduleBuilderActions() {
       'afterbegin',
       '<button id="scheduleStepBack" class="secondary-button" data-action="schedule-step-back" type="button">Back</button>'
     )
+  }
+  if (!el('schedulePublishStatus')) {
+    actions.insertAdjacentHTML('afterbegin', '<p id="schedulePublishStatus" class="schedule-publish-status" aria-live="polite"></p>')
   }
 }
 
@@ -367,15 +371,17 @@ function updateScheduleBuilderActions() {
   const back = el('scheduleStepBack')
   const primary = el('scheduleStepPrimary')
   const publish = el('publishSchedulePlan')
+  const publishStatus = el('schedulePublishStatus')
   const actions = kcpUsabilityScheduleForm?.querySelector('.schedule-builder-actions')
   if (!back || !primary || !publish || !actions) return
 
   back.classList.toggle('hidden', kcpScheduleStep === 1)
   publish.classList.toggle('hidden', kcpScheduleStep !== 4)
   const pendingDrivers = (state.invitations || []).filter(invitation => invitation.status === 'pending' && invitation.can_drive)
-  publish.disabled = pendingDrivers.length > 0
+  const impactReady = typeof window.kcpScheduleImpactReady !== 'function' || window.kcpScheduleImpactReady()
+  publish.disabled = pendingDrivers.length > 0 || !kcpSchedulePreviewFresh || !impactReady
   publish.title = pendingDrivers.length
-    ? 'Waiting for every invited driver to accept or decline. Preview remains available.'
+    ? 'Waiting for every invited driver to accept or decline. You can still check and save this draft.'
     : ''
   actions.classList.toggle('is-final-step', kcpScheduleStep === 4)
 
@@ -383,11 +389,23 @@ function updateScheduleBuilderActions() {
     primary.textContent = 'Continue'
     primary.className = 'primary-button'
   } else if (kcpScheduleStep === 3) {
-    primary.textContent = 'Preview schedule'
+    primary.textContent = 'Check schedule'
     primary.className = 'primary-button'
   } else {
-    primary.textContent = 'Refresh preview'
+    primary.textContent = 'Check again'
     primary.className = 'secondary-button'
+  }
+
+  if (publishStatus) {
+    publishStatus.classList.toggle('hidden', kcpScheduleStep !== 4)
+    publishStatus.classList.toggle('warning', pendingDrivers.length > 0 || !impactReady)
+    publishStatus.textContent = pendingDrivers.length
+      ? `${pendingDrivers.length} invited driver${pendingDrivers.length === 1 ? '' : 's'} still need to accept or decline. The draft is saved, but it cannot be made live yet.`
+      : !impactReady
+        ? 'The rides are ready to view, but the final change check did not finish. Tap Check again before making the schedule live.'
+        : kcpSchedulePreviewFresh
+          ? 'Ready to make live. Everyone affected by the schedule will be notified.'
+          : 'Check the latest changes before making the schedule live.'
   }
 }
 
@@ -400,9 +418,9 @@ function updateScheduleStepSummaries() {
   const driverCount = scheduleParticipantOrder.filter(id => selectedScheduleParticipants.has(id)).length
 
   setStepSummary(1, starts && ends ? `${shortDate(starts)} – ${shortDate(ends)}` : 'Choose dates')
-  setStepSummary(2, `${scheduleDraftSessions.length} recurring ride${scheduleDraftSessions.length === 1 ? '' : 's'}`)
+  setStepSummary(2, `${scheduleDraftSessions.length} weekly ride${scheduleDraftSessions.length === 1 ? '' : 's'}`)
   setStepSummary(3, `${strategy?.title || 'Assignment'}${driverCount ? ` · ${driverCount} driver${driverCount === 1 ? '' : 's'}` : ''}`)
-  setStepSummary(4, kcpSchedulePreviewFresh ? 'Ready to publish' : 'Preview required')
+  setStepSummary(4, kcpSchedulePreviewFresh ? 'Ready to share' : 'Check required')
 }
 
 function setStepSummary(step, text) {
@@ -421,7 +439,7 @@ function markSchedulePreviewStale() {
   if (kcpScheduleStep === 4) {
     el('schedulePreview')?.insertAdjacentHTML(
       'afterbegin',
-      '<p class="schedule-preview-stale">The rules changed. Refresh the preview before publishing.</p>'
+      '<p class="schedule-preview-stale">The schedule changed. Check it again before making it live.</p>'
     )
   }
   updateScheduleBuilderActions()

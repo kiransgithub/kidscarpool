@@ -14,10 +14,10 @@ test('Viewer invitation needs no child and can never be assigned to drive', () =
   assert.match(migration, /alter column child_name drop not null/)
 })
 
-test('Parent invitation requires a child while Admin child data is optional', () => {
+test('Family invitation requires a child while group-manager child data is optional', () => {
   assert.match(source, /childRequired = role === 'parent'/)
   assert.match(migration, /p_role = 'parent' and normalized_child is null/)
-  assert.match(source, /Admin.*Child information and driving are optional/s)
+  assert.match(source, /Group manager.*Child and driving information are optional/s)
 })
 
 test('shared invitation is a deep link with a server-backed preview', () => {
