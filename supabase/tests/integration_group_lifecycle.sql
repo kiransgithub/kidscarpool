@@ -60,7 +60,12 @@ begin
     assert v_plan is not null, 'group must be created with a draft plan';
 
     -- ---- invite a second parent ------------------------------------------
-    v_inv := public.kcp_create_invitation(v_group.id, 'Second Parent', 'parent');
+    v_inv := public.kcp_create_invitation_v2(
+        p_group_id => v_group.id,
+        p_member_name => 'Second Parent',
+        p_role => 'parent',
+        p_child_name => 'Second Child'
+    );
 
     perform auth.become(v_parent);
     perform public.kcp_upsert_profile('Second Parent');
