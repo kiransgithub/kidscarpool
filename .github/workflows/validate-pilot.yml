@@ -50,6 +50,7 @@ jobs:
               'web/schedule-builder-usability.css',
               'web/weekly-matrix-flow.css',
               'web/account-auth.css',
+              'web/all-group-home.css',
               'web/support/index.html',
               'web/support/app.js',
               'web/support/styles.css',
@@ -61,7 +62,10 @@ jobs:
               'web/app.parts/17-database-state-sync.js',
               'web/app.parts/18-permanent-auth.js',
               'web/app.parts/18a-account-styles.js',
-              'web/app.parts/19-platform-admin.js'
+              'web/app.parts/19-platform-admin.js',
+              'web/app.parts/20-user-safe-errors.js',
+              'web/app.parts/21-all-group-home-navigation.js',
+              'web/app.parts/21a-all-group-styles.js'
           ]
           for asset in required_assets:
               assert Path(asset).exists(), f'Missing required client asset: {asset}'
@@ -112,7 +116,7 @@ jobs:
 
           assert "p_scheduled - interval '10 minutes'" in executable_sql
           assert "p_scheduled + interval '90 minutes'" in executable_sql
-          print(f'Validated {len(migrations)} linked migration(s), baseline, runtime and support assets')
+          print(f'Validated {len(migrations)} linked migration(s), baseline, runtime and consumer navigation assets')
           PY
 
   fresh-supabase-database:
@@ -157,5 +161,6 @@ jobs:
           run_sql "weekend schedule and availability" supabase/tests/regression_weekend_schedule.sql
           run_sql "permanent identity and devices" supabase/tests/integration_permanent_identity.sql
           run_sql "platform Super Admin and support" supabase/tests/integration_platform_admin.sql
+          run_sql "all-group personal agenda" supabase/tests/integration_all_group_agenda.sql
       - name: Show migration status
         run: supabase migration list --local

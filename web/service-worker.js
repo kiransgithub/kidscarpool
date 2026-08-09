@@ -1,4 +1,4 @@
-const CACHE = 'kcp-pilot-v12-user-safe-status'
+const CACHE = 'kcp-pilot-v13-all-group-home'
 const SHELL = [
   './',
   './index.html',
@@ -8,6 +8,7 @@ const SHELL = [
   './schedule-builder-usability.css',
   './weekly-matrix-flow.css',
   './account-auth.css',
+  './all-group-home.css',
   './app.js',
   './logic.js',
   './persistence.js',
