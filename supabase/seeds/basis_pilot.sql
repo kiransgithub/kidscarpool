@@ -37,8 +37,8 @@ begin
     delete from public.kcp_groups where code = 'BASIS1';
 
     insert into public.kcp_groups(
-        code, name, group_kind, school_name, academic_year, timezone)
-    values ('BASIS1', 'BASIS Phoenix Primary Carpool', 'school',
+        code, name, group_kind, school_key, school_name, academic_year, timezone)
+    values ('BASIS1', 'BASIS Phoenix Primary Carpool', 'school', 'basis_phoenix_primary',
             'BASIS Phoenix Primary', '2026-27', 'America/Phoenix')
     returning id into v_group;
 
