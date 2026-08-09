@@ -103,8 +103,8 @@ if (!el('emailSignInForm')) {
   tabs?.insertAdjacentHTML('beforeend', '<button class="segment" data-onboarding-mode="email" type="button">Email sign in</button>')
   joinForm?.insertAdjacentHTML('afterend', `
     <form id="emailSignInForm" class="card form-card hidden">
-      <h2>Sign in on this device</h2>
-      <p class="meta">Use the verified email already linked to your KCP account.</p>
+      <h2>Continue with email</h2>
+      <p class="meta">Use a linked email to sign in, or enter a new email to create your verified KCP account.</p>
       <label>Email address<input id="emailSignInAddress" type="email" required autocomplete="email" placeholder="you@example.com"></label>
       <div id="emailSignInStatus" class="account-status hidden" role="status" aria-live="polite"></div>
       <button class="primary-button" type="submit">Email me a sign-in link</button>
@@ -173,7 +173,7 @@ el('emailSignInForm')?.addEventListener('submit', async event => {
       email,
       options: {
         emailRedirectTo: `${location.origin}${location.pathname}`,
-        shouldCreateUser: false
+        shouldCreateUser: true
       }
     })
     if (error) throw error
@@ -287,6 +287,9 @@ supabase.auth.onAuthStateChange(async event => {
 
 function accountAuthMessage(error) {
   const message = error?.message || String(error)
+  if (/otp_disabled|signups not allowed for otp/i.test(`${error?.code || ''} ${message}`)) {
+    return 'Email sign-in is disabled for this KCP environment. Ask the platform administrator to enable email authentication.'
+  }
   if (/manual linking|identity.*link/i.test(message)) {
     return 'Account linking is not enabled yet. A platform administrator must enable manual identity linking in Authentication settings.'
   }

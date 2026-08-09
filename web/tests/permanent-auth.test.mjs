@@ -13,10 +13,16 @@ test('anonymous users can link a verified email without replacing their user id'
   assert.match(source, /existing groups, roles, schedules, trips and points stay attached/i)
 })
 
-test('permanent users can request an email sign-in link on another device', () => {
+test('email onboarding supports new verified accounts and existing-account sign in', () => {
   assert.match(source, /supabase\.auth\.signInWithOtp/)
-  assert.match(source, /shouldCreateUser:\s*false/)
+  assert.match(source, /shouldCreateUser:\s*true/)
+  assert.match(source, /enter a new email to create your verified KCP account/i)
   assert.match(source, /Email sign in/)
+})
+
+test('email configuration failures are explained clearly', () => {
+  assert.match(source, /otp_disabled/)
+  assert.match(source, /Email sign-in is disabled for this KCP environment/)
 })
 
 test('device registry is user-scoped and supports removal', () => {
