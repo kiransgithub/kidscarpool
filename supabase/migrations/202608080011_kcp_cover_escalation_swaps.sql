@@ -412,7 +412,7 @@ begin
         union all
         select * from swaps
     ) operations
-    order by operations.requires_my_action desc, operations.created_at desc
+    order by 23 desc, 22 desc
     limit least(greatest(p_limit, 1), 1000);
 end;
 $$;

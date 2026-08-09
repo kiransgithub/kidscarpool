@@ -343,13 +343,13 @@ begin
 
     select jsonb_build_object(
         'totalCandidateRides', (select count(*) from unnest(compare_rows) compare where compare.new_time is not null),
-        'added', (select count(*) from public.kcp_schedule_change_impacts where change_set_id = set_id and impact_type = 'added'),
-        'removed', (select count(*) from public.kcp_schedule_change_impacts where change_set_id = set_id and impact_type = 'removed'),
-        'timeChanged', (select count(*) from public.kcp_schedule_change_impacts where change_set_id = set_id and impact_type = 'time_changed'),
-        'driverChanged', (select count(*) from public.kcp_schedule_change_impacts where change_set_id = set_id and impact_type = 'driver_changed'),
-        'conflicts', (select count(*) from public.kcp_schedule_change_impacts where change_set_id = set_id and impact_type = 'cross_group_conflict'),
-        'affectedUsers', (select count(distinct affected_user_id) from public.kcp_schedule_change_impacts where change_set_id = set_id and affected_user_id is not null),
-        'urgentImpacts', (select count(*) from public.kcp_schedule_change_impacts where change_set_id = set_id and coalesce(new_time, old_time) <= now() + interval '24 hours')
+        'added', (select count(*) from public.kcp_schedule_change_impacts impact where impact.change_set_id = set_id and impact.impact_type = 'added'),
+        'removed', (select count(*) from public.kcp_schedule_change_impacts impact where impact.change_set_id = set_id and impact.impact_type = 'removed'),
+        'timeChanged', (select count(*) from public.kcp_schedule_change_impacts impact where impact.change_set_id = set_id and impact.impact_type = 'time_changed'),
+        'driverChanged', (select count(*) from public.kcp_schedule_change_impacts impact where impact.change_set_id = set_id and impact.impact_type = 'driver_changed'),
+        'conflicts', (select count(*) from public.kcp_schedule_change_impacts impact where impact.change_set_id = set_id and impact.impact_type = 'cross_group_conflict'),
+        'affectedUsers', (select count(distinct impact.affected_user_id) from public.kcp_schedule_change_impacts impact where impact.change_set_id = set_id and impact.affected_user_id is not null),
+        'urgentImpacts', (select count(*) from public.kcp_schedule_change_impacts impact where impact.change_set_id = set_id and coalesce(impact.new_time, impact.old_time) <= now() + interval '24 hours')
     ) into summary_value;
 
     requires_ack := coalesce((summary_value->>'urgentImpacts')::integer, 0) > 0;
