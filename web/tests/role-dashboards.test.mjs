@@ -25,7 +25,9 @@ test('Owner and Admin Home shows only operational management metrics', () => {
 
 test('Parent Home focuses on assignments and personal requests', () => {
   assert.match(source, /YOUR RIDES/)
-  assert.match(source, /YOUR NEXT ASSIGNMENT/)
+  assert.match(source, /YOUR NEXT DRIVE/)
+  assert.match(source, /'drive'/)
+  assert.doesNotMatch(source, /YOUR NEXT ASSIGNMENT.*✓/)
   assert.match(source, /requested_by === state\.session/)
   assert.match(source, /accepted_by === state\.session/)
 })

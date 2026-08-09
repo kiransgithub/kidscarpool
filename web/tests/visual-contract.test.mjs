@@ -11,9 +11,10 @@ async function text(relative) {
 }
 
 test('existing KCP theme and navigation remain intact', async () => {
-  const [index, styles] = await Promise.all([
+  const [index, styles, agenda] = await Promise.all([
     text('web/index.html'),
-    text('web/styles.css')
+    text('web/styles.css'),
+    text('web/app.parts/21-all-group-home-navigation.js')
   ])
 
   assert.match(styles, /--navy:\s*#071a3d/)
@@ -25,6 +26,10 @@ test('existing KCP theme and navigation remain intact', async () => {
   assert.match(index, /KIDSCARPOOL/)
   assert.match(index, /nextDropCard/)
   assert.match(index, /nextPickupCard/)
+  assert.match(agenda, /agendaFocusIcon/)
+  assert.match(agenda, /trip-driver-row/)
+  assert.match(styles, /\.trip-focus-icon/)
+  assert.match(styles, /\.trip-focus-card \.trip-driver-row[\s\S]*background:\s*rgba\(7,26,61,\.78\)[\s\S]*color:\s*#fff/)
 })
 
 test('usability controls remain additive and trip modal keeps stable layout hooks', async () => {

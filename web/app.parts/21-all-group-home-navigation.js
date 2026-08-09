@@ -93,8 +93,8 @@ renderHome = function () {
   ) || null
   const attention = state.allGroupRequests.filter(item => item.requires_my_action)
 
-  renderAgendaFocusCard(el('nextDropCard'), nextRide, 'NEXT RIDE', '↗')
-  renderAgendaFocusCard(el('nextPickupCard'), nextAssignment, 'YOUR NEXT ASSIGNMENT', '✓')
+  renderAgendaFocusCard(el('nextDropCard'), nextRide, 'NEXT RIDE', 'ride')
+  renderAgendaFocusCard(el('nextPickupCard'), nextAssignment, 'YOUR NEXT DRIVE', 'drive')
 
   el('homeAlerts').innerHTML = `
     <div class="group-card-head">
@@ -109,22 +109,29 @@ renderHome = function () {
     ${attention.length ? '<button class="secondary-button" data-nav="requests" type="button">View requests</button>' : `<p class="meta">${state.allGroupAgenda.length ? 'Upcoming rides from every group are shown here automatically.' : 'Create a group or accept an invitation to begin.'}</p>`}`
 }
 
-function renderAgendaFocusCard(container, trip, heading, symbol) {
-  container.className = `trip-focus-card ${heading.includes('ASSIGNMENT') ? 'pickup' : 'morning'}`
+function agendaFocusIcon(name) {
+  const paths = name === 'drive'
+    ? '<path d="M5 17h14v-5l-2-5H7l-2 5v5Z"/><path d="M6 12h12M7 17v2M17 17v2"/><circle cx="8" cy="14.5" r="1"/><circle cx="16" cy="14.5" r="1"/>'
+    : '<path d="M5 19c0-4 2-6 6-6h8"/><path d="m15 9 4 4-4 4"/><circle cx="5" cy="19" r="2"/>'
+  return `<svg class="trip-focus-icon" viewBox="0 0 24 24" aria-hidden="true">${paths}</svg>`
+}
+
+function renderAgendaFocusCard(container, trip, heading, focusIcon) {
+  container.className = `trip-focus-card ${focusIcon === 'drive' ? 'pickup' : 'morning'}`
   if (!trip) {
     container.classList.add('empty')
-    container.innerHTML = `<div class="trip-symbol">${symbol}</div><div class="trip-label">${heading}</div><h2>No upcoming ride</h2><p class="meta">Live rides from all of your groups will appear here.</p>`
+    container.innerHTML = `<div class="trip-symbol">${agendaFocusIcon(focusIcon)}</div><div class="trip-label">${heading}</div><h2>No upcoming ride</h2><p class="meta">Live rides from all of your groups will appear here.</p>`
     return
   }
 
   const driver = trip.actual_driver_name || trip.scheduled_driver_name || 'Unassigned'
   container.innerHTML = `
-    <div class="trip-symbol">${symbol}</div>
+    <div class="trip-symbol">${agendaFocusIcon(focusIcon)}</div>
     <div class="trip-label">${escapeHTML(heading)}</div>
     <span class="group-context-badge">${escapeHTML(trip.group_name)}</span>
     <div class="driver">${escapeHTML(trip.display_label || 'Ride')}</div>
     <div class="trip-time">${escapeHTML(agendaDateTime(trip))}</div>
-    <div class="meta">Driver: <strong>${escapeHTML(driver)}</strong></div>
+    <div class="trip-driver-row"><span>Driver</span><strong>${escapeHTML(driver)}</strong></div>
     ${statusPill(trip.status)}
     <div style="height:12px"></div>
     <button class="primary-button" data-action="open-agenda-trip" data-group-id="${trip.group_id}" data-trip-id="${trip.trip_id}" type="button">View ride</button>`

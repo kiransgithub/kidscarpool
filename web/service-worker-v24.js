@@ -1,4 +1,4 @@
-const CACHE = 'kcp-community-v24-offline-accessibility-v25-navigation-language'
+const CACHE = 'kcp-community-v24-offline-accessibility-v25-navigation-language-v26-focus-card-contrast'
 const SHELL = [
   './',
   './index.html',

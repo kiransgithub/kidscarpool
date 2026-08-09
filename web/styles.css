@@ -104,10 +104,14 @@ input:focus, select:focus, textarea:focus { border-color: var(--blue); box-shado
 .trip-focus-card.morning { background: linear-gradient(145deg, #0d47a1, var(--blue), #5b8cff); }
 .trip-focus-card.pickup { background: linear-gradient(145deg, #4c1d95, var(--purple), #a855f7); }
 .trip-focus-card.empty { color: var(--ink); background: white; min-height: 170px; }
-.trip-focus-card .trip-symbol { font-size: 32px; }
+.trip-focus-card .trip-symbol { display: flex; align-items: center; width: 40px; height: 40px; }
+.trip-focus-icon { width: 34px; height: 34px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2; }
 .trip-focus-card .trip-label { font-size: 12px; font-weight: 900; letter-spacing: .1em; opacity: .8; }
 .trip-focus-card .driver { font-size: 30px; font-weight: 950; margin: 12px 0 4px; }
 .trip-focus-card .trip-time { font-size: 16px; font-weight: 750; }
+.trip-focus-card .trip-driver-row { display: inline-flex; align-items: baseline; gap: 6px; margin: 7px 0 8px; padding: 6px 10px; border: 1px solid rgba(255,255,255,.24); border-radius: 10px; background: rgba(7,26,61,.78); color: #fff; font-size: 13px; font-weight: 750; line-height: 1.2; }
+.trip-focus-card .trip-driver-row span { color: rgba(255,255,255,.84); }
+.trip-focus-card .trip-driver-row strong { color: #fff; font-weight: 900; }
 .trip-focus-card .countdown { margin: 14px 0; font-size: 14px; background: rgba(255,255,255,.14); display: inline-block; padding: 8px 11px; border-radius: 12px; }
 .trip-focus-card .primary-button { background: white; color: var(--blue); box-shadow: none; width: 100%; }
 

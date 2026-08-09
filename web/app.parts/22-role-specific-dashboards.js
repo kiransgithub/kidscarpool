@@ -41,8 +41,8 @@ renderHome = function () {
   ) || null
 
   if (portfolio.viewerOnly) {
-    renderAgendaFocusCard(el('nextDropCard'), nextRide, 'NEXT RIDE', '↗')
-    renderAgendaFocusCard(el('nextPickupCard'), upcoming[1] || null, 'AFTER THAT', '›')
+    renderAgendaFocusCard(el('nextDropCard'), nextRide, 'NEXT RIDE', 'ride')
+    renderAgendaFocusCard(el('nextPickupCard'), upcoming[1] || null, 'AFTER THAT', 'ride')
     el('homeAlerts').innerHTML = `
       <span class="eyebrow">READ-ONLY VIEW</span>
       <h2>${nextRide ? 'Your group schedule is current' : 'No upcoming rides'}</h2>
@@ -52,8 +52,8 @@ renderHome = function () {
     return
   }
 
-  renderAgendaFocusCard(el('nextDropCard'), nextRide, 'NEXT RIDE', '↗')
-  renderAgendaFocusCard(el('nextPickupCard'), nextAssignment, 'YOUR NEXT ASSIGNMENT', '✓')
+  renderAgendaFocusCard(el('nextDropCard'), nextRide, 'NEXT RIDE', 'ride')
+  renderAgendaFocusCard(el('nextPickupCard'), nextAssignment, 'YOUR NEXT DRIVE', 'drive')
 
   if (portfolio.managedGroups.length) {
     const pendingChanges = state.allGroupRequests.filter(item =>
