@@ -55,8 +55,10 @@ begin
     insert into public.kcp_profiles(id, display_name) values (v_user, 'Owner');
     perform auth.become(v_user);
 
-    insert into public.kcp_groups(code, name, created_by)
-        values ('OWNTST', 'Owner invariant test', v_user)
+    insert into public.kcp_groups(
+            code, name, school_key, school_name, academic_year, created_by)
+        values ('OWNTST', 'Owner invariant test', 'owner-test-1',
+                'Owner test destination', 'Test term', v_user)
         returning id into v_group;
     insert into public.kcp_memberships(
             group_id, user_id, parent_name, child_name, grade, role, status)
@@ -114,8 +116,10 @@ begin
     insert into public.kcp_profiles(id, display_name)
     values (v_user, 'Owner2'), (v_second, 'Second owner');
     perform auth.become(v_user);
-    insert into public.kcp_groups(code, name, created_by)
-        values ('OWNTS2', 'Owner invariant test 2', v_user)
+    insert into public.kcp_groups(
+            code, name, school_key, school_name, academic_year, created_by)
+        values ('OWNTS2', 'Owner invariant test 2', 'owner-test-2',
+                'Owner test destination', 'Test term', v_user)
         returning id into v_group;
     insert into public.kcp_memberships(
             group_id, user_id, parent_name, child_name, grade, role, status)
@@ -146,8 +150,10 @@ begin
     insert into auth.users(id) values (v_user);
     insert into public.kcp_profiles(id, display_name) values (v_user, 'Owner3');
     perform auth.become(v_user);
-    insert into public.kcp_groups(code, name, created_by)
-        values ('OWNTS3', 'Owner invariant test 3', v_user)
+    insert into public.kcp_groups(
+            code, name, school_key, school_name, academic_year, created_by)
+        values ('OWNTS3', 'Owner invariant test 3', 'owner-test-3',
+                'Owner test destination', 'Test term', v_user)
         returning id into v_group;
     insert into public.kcp_memberships(
             group_id, user_id, parent_name, child_name, grade, role, status)
