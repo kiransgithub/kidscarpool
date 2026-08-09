@@ -18,6 +18,7 @@ declare
     v_parent uuid := gen_random_uuid();
     v_stranger uuid := gen_random_uuid();
     v_group public.kcp_groups;
+    v_group_id uuid;
     v_inv public.kcp_invitations;
     v_plan uuid;
     v_sess uuid;
@@ -38,8 +39,14 @@ begin
     -- ---- owner creates a group -------------------------------------------
     perform auth.become(v_owner);
     perform public.kcp_upsert_profile('Owner Parent');
-    v_group := public.kcp_create_group('Soccer Carpool', 'sport', 'America/Phoenix');
-    assert v_group.code ~ '^[A-Z0-9]{6}$', 'group code must be 6 chars';
+    select created.group_id
+      into v_group_id
+      from public.kcp_create_group_v3(
+          'Soccer Carpool', 'other', 'Community Soccer Field',
+          'Fall season', 'America/Phoenix', 'Owner Child', 'Grade 4'
+      ) created;
+    select * into v_group from public.kcp_groups where id = v_group_id;
+    assert v_group.code ~ '^KCP-[A-F0-9]{10}$', 'group code must use the KCP token format';
 
     v_owner_pid := public.kcp_current_participant_id(v_group.id);
     assert v_owner_pid is not null, 'creator must be an active participant';
@@ -141,10 +148,14 @@ begin
 
     -- pull it into the window, then run the lifecycle
     update public.kcp_trips set scheduled_time = now() where id = v_trip_id;
+    perform public.kcp_confirm_trip(v_trip_id);
     perform public.kcp_start_trip(v_trip_id);
     assert (select status from public.kcp_trips where id = v_trip_id)
            = 'in_progress', 'trip must be in progress';
+    update public.kcp_trips set started_at = now() - interval '4 minutes'
+     where id = v_trip_id;
     perform public.kcp_complete_trip(v_trip_id);
+    perform public.kcp_confirm_trip_completion(v_trip_id);
     assert (select status from public.kcp_trips where id = v_trip_id)
            = 'completed', 'trip must be completed';
 
@@ -176,8 +187,12 @@ begin
            'covered trips are volunteer assignments';
 
     update public.kcp_trips set scheduled_time = now() where id = v_trip_id;
+    perform public.kcp_confirm_trip(v_trip_id);
     perform public.kcp_start_trip(v_trip_id);
+    update public.kcp_trips set started_at = now() - interval '4 minutes'
+     where id = v_trip_id;
     perform public.kcp_complete_trip(v_trip_id);
+    perform public.kcp_confirm_trip_completion(v_trip_id);
     assert (select points from public.kcp_points_ledger where trip_id = v_trip_id)
            = 20, 'a volunteer trip awards 20 points';
 
