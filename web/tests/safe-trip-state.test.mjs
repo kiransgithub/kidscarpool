@@ -5,7 +5,7 @@ import fs from 'node:fs'
 const source = fs.readFileSync('web/app.parts/26-safe-trip-state.js', 'utf8')
 const migration = fs.readFileSync('supabase/migrations/202608080007_kcp_safe_trip_state_machine.sql', 'utf8')
 const coverMigration = fs.readFileSync('supabase/migrations/202608080008_kcp_safe_cover_states.sql', 'utf8')
-const worker = fs.readFileSync('web/service-worker.js', 'utf8')
+const worker = fs.readFileSync('web/service-worker-v24.js', 'utf8')
 
 test('time lifecycle never auto-completes a ride or awards points', () => {
   const lifecycle = migration.slice(migration.indexOf('create or replace function public.kcp_process_trip_lifecycle'))
@@ -50,6 +50,6 @@ test('unconfirmed ride is visibly different from completed ride', () => {
 })
 
 test('installed app refreshes safe-state assets', () => {
-  assert.match(worker, /v18-safe-trip-state/)
+  assert.match(worker, /v24-offline-accessibility/)
   assert.match(worker, /\.\/safe-trip-state\.css/)
 })

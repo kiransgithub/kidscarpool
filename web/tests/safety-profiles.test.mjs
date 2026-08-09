@@ -4,7 +4,7 @@ import fs from 'node:fs'
 
 const source = fs.readFileSync('web/app.parts/24-safety-profiles.js', 'utf8')
 const migration = fs.readFileSync('supabase/migrations/202608080005_kcp_safety_profiles_vehicles.sql', 'utf8')
-const worker = fs.readFileSync('web/service-worker.js', 'utf8')
+const worker = fs.readFileSync('web/service-worker-v24.js', 'utf8')
 
 test('child safety profile captures only transportation-critical details', () => {
   assert.match(migration, /kcp_child_safety_profiles/)
@@ -39,6 +39,6 @@ test('Viewer settings do not render family safety controls', () => {
 })
 
 test('installed app refreshes safety-profile assets', () => {
-  assert.match(worker, /v16-safety-profiles/)
+  assert.match(worker, /v24-offline-accessibility/)
   assert.match(worker, /\.\/safety-profiles\.css/)
 })

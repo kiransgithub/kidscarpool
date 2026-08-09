@@ -2,8 +2,7 @@
 -- Regression: recovery-safe single-active-owner invariant
 --
 -- Ports supabase/tests/regression_owner_transfer_invariant.sql (which targeted
--- kcp_memberships) onto the single-identity model in the baseline, where role
--- lives on kcp_group_participants.
+-- kcp_memberships) onto the canonical membership role model.
 --
 -- The invariant MUST be enforced by a DEFERRED constraint trigger and NOT by
 -- an immediate partial unique index. An immediate index rejects the
@@ -27,6 +26,7 @@
 do $$
 declare
     v_user  uuid := gen_random_uuid();
+    v_parent uuid := gen_random_uuid();
     v_group uuid;
     v_owner uuid;
     v_count integer;
@@ -40,8 +40,8 @@ begin
 
     if not exists (
         select 1 from pg_trigger t
-        where t.tgrelid = 'public.kcp_group_participants'::regclass
-          and t.tgname  = 'kcp_participants_owner_invariant'
+        where t.tgrelid = 'public.kcp_memberships'::regclass
+          and t.tgname  = 'kcp_memberships_single_owner_check'
           and not t.tgisinternal
           and t.tgdeferrable
           and t.tginitdeferred
@@ -55,25 +55,29 @@ begin
     insert into public.kcp_profiles(id, display_name) values (v_user, 'Owner');
     perform auth.become(v_user);
 
-    insert into public.kcp_groups(code, name, created_by)
-        values ('OWNTST', 'Owner invariant test', v_user)
+    insert into public.kcp_groups(
+            code, name, school_key, school_name, academic_year, created_by)
+        values ('OWNTST', 'Owner invariant test', 'owner-test-1',
+                'Owner test destination', 'Test term', v_user)
         returning id into v_group;
-    insert into public.kcp_group_participants(
-            group_id, user_id, display_name, role, status)
-        values (v_group, v_user, 'Owner', 'owner', 'active')
-        returning id into v_owner;
+    insert into public.kcp_memberships(
+            group_id, user_id, parent_name, child_name, grade, role, status)
+        values (v_group, v_user, 'Owner', 'Owner child', 4, 'owner', 'active');
+    v_owner := v_user;
 
     -- ---- B: atomic owner transfer ----------------------------------------
     -- Passes through a transient two-owner state; must still commit.
-    insert into public.kcp_group_participants(
-            group_id, display_name, role, status)
-        values (v_group, 'New owner', 'owner', 'active');
-    update public.kcp_group_participants
+    insert into auth.users(id) values (v_parent);
+    insert into public.kcp_profiles(id, display_name) values (v_parent, 'New owner');
+    insert into public.kcp_memberships(
+            group_id, user_id, parent_name, child_name, grade, role, status)
+        values (v_group, v_parent, 'New owner', 'New child', 4, 'owner', 'active');
+    update public.kcp_memberships
        set role = 'admin'
-     where id = v_owner;
+     where group_id = v_group and user_id = v_owner;
 
     select count(*) into v_count
-      from public.kcp_group_participants
+      from public.kcp_memberships
      where group_id = v_group and role = 'owner' and status = 'active';
     if v_count <> 1 then
         raise exception 'B FAILED: expected 1 active owner, found %', v_count;
@@ -83,11 +87,11 @@ begin
     -- ---- C: zero owners must be rejected ---------------------------------
     v_failed := false;
     begin
-        update public.kcp_group_participants
+        update public.kcp_memberships
            set role = 'parent'
          where group_id = v_group;
         -- Force the deferred trigger to fire without ending this block.
-        set constraints public.kcp_participants_owner_invariant immediate;
+        set constraints public.kcp_memberships_single_owner_check immediate;
     exception when others then
         v_failed := true;
     end;
@@ -104,25 +108,29 @@ $$;
 do $$
 declare
     v_user  uuid := gen_random_uuid();
+    v_second uuid := gen_random_uuid();
     v_group uuid;
     v_failed boolean := false;
 begin
-    insert into auth.users(id) values (v_user);
-    insert into public.kcp_profiles(id, display_name) values (v_user, 'Owner2');
+    insert into auth.users(id) values (v_user), (v_second);
+    insert into public.kcp_profiles(id, display_name)
+    values (v_user, 'Owner2'), (v_second, 'Second owner');
     perform auth.become(v_user);
-    insert into public.kcp_groups(code, name, created_by)
-        values ('OWNTS2', 'Owner invariant test 2', v_user)
+    insert into public.kcp_groups(
+            code, name, school_key, school_name, academic_year, created_by)
+        values ('OWNTS2', 'Owner invariant test 2', 'owner-test-2',
+                'Owner test destination', 'Test term', v_user)
         returning id into v_group;
-    insert into public.kcp_group_participants(
-            group_id, user_id, display_name, role, status)
-        values (v_group, v_user, 'Owner', 'owner', 'active');
+    insert into public.kcp_memberships(
+            group_id, user_id, parent_name, child_name, grade, role, status)
+        values (v_group, v_user, 'Owner', 'Owner child', 4, 'owner', 'active');
 
     -- ---- D: two owners at commit must be rejected ------------------------
     begin
-        insert into public.kcp_group_participants(
-                group_id, display_name, role, status)
-            values (v_group, 'Second owner', 'owner', 'active');
-        set constraints public.kcp_participants_owner_invariant immediate;
+        insert into public.kcp_memberships(
+                group_id, user_id, parent_name, child_name, grade, role, status)
+            values (v_group, v_second, 'Second owner', 'Second child', 4, 'owner', 'active');
+        set constraints public.kcp_memberships_single_owner_check immediate;
     exception when others then
         v_failed := true;
     end;
@@ -142,12 +150,14 @@ begin
     insert into auth.users(id) values (v_user);
     insert into public.kcp_profiles(id, display_name) values (v_user, 'Owner3');
     perform auth.become(v_user);
-    insert into public.kcp_groups(code, name, created_by)
-        values ('OWNTS3', 'Owner invariant test 3', v_user)
+    insert into public.kcp_groups(
+            code, name, school_key, school_name, academic_year, created_by)
+        values ('OWNTS3', 'Owner invariant test 3', 'owner-test-3',
+                'Owner test destination', 'Test term', v_user)
         returning id into v_group;
-    insert into public.kcp_group_participants(
-            group_id, user_id, display_name, role, status)
-        values (v_group, v_user, 'Owner', 'owner', 'active');
+    insert into public.kcp_memberships(
+            group_id, user_id, parent_name, child_name, grade, role, status)
+        values (v_group, v_user, 'Owner', 'Owner child', 4, 'owner', 'active');
 
     delete from public.kcp_groups where id = v_group;
 

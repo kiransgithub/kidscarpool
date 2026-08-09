@@ -81,8 +81,8 @@ test('weekly matrix styles prevent sticky overlap and preserve dark-mode contras
 })
 
 test('service worker advances and keeps the weekly matrix stylesheet', async () => {
-  const worker = await text('web/service-worker.js')
+  const worker = await text('web/service-worker-v24.js')
 
-  assert.match(worker, /kcp-pilot-v9-database-driven-ui/)
+  assert.match(worker, /v24-offline-accessibility/)
   assert.match(worker, /\.\/weekly-matrix-flow\.css/)
 })

@@ -10,6 +10,7 @@ do $$
 declare
     v_owner uuid := gen_random_uuid();
     v_group public.kcp_groups;
+    v_group_id uuid;
     v_plan uuid;
     v_owner_pid uuid;
     v_policy uuid;
@@ -22,11 +23,12 @@ begin
     perform auth.become(v_owner);
     perform public.kcp_upsert_profile('Weekend Owner');
 
-    v_group := public.kcp_create_group(
-        'Weekend Activity Carpool',
-        'activity',
-        'America/Phoenix'
-    );
+    select created.group_id into v_group_id
+    from public.kcp_create_group_v3(
+        'Weekend Activity Carpool', 'other', 'Weekend Activity Center',
+        'Weekend term', 'America/Phoenix', 'Weekend Child', 'Grade 4'
+    ) created;
+    select * into v_group from public.kcp_groups where id = v_group_id;
     v_owner_pid := public.kcp_current_participant_id(v_group.id);
 
     select id into v_plan
@@ -88,14 +90,17 @@ begin
         array[6,7]::smallint[],
         'Available on both weekend days'
     );
-    perform public.kcp_review_constraint_request(v_request, true, 'Approved');
+    perform public.kcp_review_constraint_request(v_request, 'approved', 'Approved');
 
     assert (
         select drop_weekdays = array[6,7]::smallint[]
            and pickup_weekdays = array[6,7]::smallint[]
-           and status = 'approved'
+           and exists (
+               select 1 from public.kcp_constraint_requests request
+               where request.id = v_request and request.status = 'approved'
+           )
         from public.kcp_constraints
-        where id = v_request
+        where group_id = v_group.id and user_id = v_owner
     ), 'Saturday/Sunday availability was not preserved';
 
     assert not public.kcp_can_start_trip_at(

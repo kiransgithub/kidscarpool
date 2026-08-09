@@ -1,0 +1,32 @@
+.notification-setup-note {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: .85rem;
+}
+
+.notification-preferences {
+  display: grid;
+  gap: 0;
+  margin-top: 14px;
+  border-top: 1px solid #e2e8f0;
+}
+.notification-toggle {
+  min-height: 48px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid #e2e8f0;
+}
+.notification-toggle input {
+  width: 22px;
+  height: 22px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .notification-setup-note { background: #442d0a; color: #fde68a; }
+  .notification-preferences,
+  .notification-toggle { border-color: #29405f; }
+}

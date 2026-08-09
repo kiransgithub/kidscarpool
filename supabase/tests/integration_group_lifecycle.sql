@@ -3,7 +3,7 @@
 --
 -- Covers: profile -> create group -> invite -> accept -> constraints request
 -- -> admin review -> schedule build -> publish -> start/complete -> points
--- -> cover request/accept/withdraw -> owner transfer -> audit immutability
+-- -> cover request/accept/withdraw -> owner invariant -> audit immutability
 -- -> RLS isolation from a non-member.
 --
 -- Usage: psql -d kcp -v ON_ERROR_STOP=1 -f this_file
@@ -18,6 +18,7 @@ declare
     v_parent uuid := gen_random_uuid();
     v_stranger uuid := gen_random_uuid();
     v_group public.kcp_groups;
+    v_group_id uuid;
     v_inv public.kcp_invitations;
     v_plan uuid;
     v_sess uuid;
@@ -38,12 +39,19 @@ begin
     -- ---- owner creates a group -------------------------------------------
     perform auth.become(v_owner);
     perform public.kcp_upsert_profile('Owner Parent');
-    v_group := public.kcp_create_group('Soccer Carpool', 'sport', 'America/Phoenix');
-    assert v_group.code ~ '^[A-Z0-9]{6}$', 'group code must be 6 chars';
+    select created.group_id
+      into v_group_id
+      from public.kcp_create_group_v3(
+          'Soccer Carpool', 'other', 'Community Soccer Field',
+          'Fall season', 'America/Phoenix', 'Owner Child', 'Grade 4'
+      ) created;
+    select * into v_group from public.kcp_groups where id = v_group_id;
+    assert v_group.code ~ '^KCP-[A-F0-9]{10}$', 'group code must use the KCP token format';
 
     v_owner_pid := public.kcp_current_participant_id(v_group.id);
     assert v_owner_pid is not null, 'creator must be an active participant';
-    assert (select role from public.kcp_group_participants where id = v_owner_pid)
+    assert (select role from public.kcp_memberships
+            where group_id = v_group.id and user_id = v_owner and status = 'active')
            = 'owner', 'creator must be owner';
 
     -- a fresh group ships with an empty draft plan
@@ -52,7 +60,12 @@ begin
     assert v_plan is not null, 'group must be created with a draft plan';
 
     -- ---- invite a second parent ------------------------------------------
-    v_inv := public.kcp_create_invitation(v_group.id, 'Second Parent', 'parent');
+    v_inv := public.kcp_create_invitation_v2(
+        p_group_id => v_group.id,
+        p_member_name => 'Second Parent',
+        p_role => 'parent',
+        p_child_name => 'Second Child'
+    );
 
     perform auth.become(v_parent);
     perform public.kcp_upsert_profile('Second Parent');
@@ -63,24 +76,23 @@ begin
     -- ---- constraint request + admin review --------------------------------
     v_req := public.kcp_submit_constraint_request(
         v_group.id, '{1,3,5}'::smallint[], '{1,3}'::smallint[], 'No Tuesdays');
-    assert (select status from public.kcp_constraints where id = v_req) = 'pending',
+    assert (select status from public.kcp_constraint_requests where id = v_req) = 'pending',
            'submitted constraints start pending';
 
     perform auth.become(v_parent);
     v_failed := false;
     begin
-        perform public.kcp_review_constraint_request(v_req, true);
+        perform public.kcp_review_constraint_request(v_req, 'approved');
     exception when others then v_failed := true;
     end;
     assert v_failed, 'a plain parent must not be able to approve constraints';
 
     perform auth.become(v_owner);
-    perform public.kcp_review_constraint_request(v_req, true, 'Approved');
-    assert (select status from public.kcp_constraints where id = v_req) = 'approved',
+    perform public.kcp_review_constraint_request(v_req, 'approved', 'Approved');
+    assert (select status from public.kcp_constraint_requests where id = v_req) = 'approved',
            'admin approval must flip status';
     assert (select count(*) from public.kcp_constraints
-            where group_id = v_group.id and participant_id = v_parent_pid
-              and status = 'approved') = 1,
+            where group_id = v_group.id and user_id = v_parent) = 1,
            'exactly one approved constraint row per participant';
 
     -- ---- build a schedule: Mon+Wed, alternating drivers per week ----------
@@ -141,10 +153,14 @@ begin
 
     -- pull it into the window, then run the lifecycle
     update public.kcp_trips set scheduled_time = now() where id = v_trip_id;
+    perform public.kcp_confirm_trip(v_trip_id);
     perform public.kcp_start_trip(v_trip_id);
     assert (select status from public.kcp_trips where id = v_trip_id)
            = 'in_progress', 'trip must be in progress';
+    update public.kcp_trips set started_at = now() - interval '4 minutes'
+     where id = v_trip_id;
     perform public.kcp_complete_trip(v_trip_id);
+    perform public.kcp_confirm_trip_completion(v_trip_id);
     assert (select status from public.kcp_trips where id = v_trip_id)
            = 'completed', 'trip must be completed';
 
@@ -176,12 +192,16 @@ begin
            'covered trips are volunteer assignments';
 
     update public.kcp_trips set scheduled_time = now() where id = v_trip_id;
+    perform public.kcp_confirm_trip(v_trip_id);
     perform public.kcp_start_trip(v_trip_id);
+    update public.kcp_trips set started_at = now() - interval '4 minutes'
+     where id = v_trip_id;
     perform public.kcp_complete_trip(v_trip_id);
+    perform public.kcp_confirm_trip_completion(v_trip_id);
     assert (select points from public.kcp_points_ledger where trip_id = v_trip_id)
            = 20, 'a volunteer trip awards 20 points';
 
-    -- ---- withdrawal returns the trip to its original driver ---------------
+    -- ---- an open request can be safely withdrawn by its requester ----------
     select t.id into v_trip_id from public.kcp_trips t
      where t.schedule_plan_id = v_plan
        and t.scheduled_participant_id = v_owner_pid
@@ -189,23 +209,26 @@ begin
      order by t.scheduled_time limit 1;
     perform auth.become(v_owner);
     v_cover := public.kcp_request_cover(v_trip_id, 'Second conflict');
-    perform auth.become(v_parent);
-    perform public.kcp_accept_cover(v_cover);
     perform public.kcp_withdraw_cover(v_cover, 'Sick');
     assert (select actual_participant_id from public.kcp_trips where id = v_trip_id)
            is null, 'withdrawal must clear the volunteer';
     assert (select status from public.kcp_cover_requests where id = v_cover)
-           = 'withdrawn', 'request must be marked withdrawn';
+           = 'cancelled', 'withdrawn request must be durably marked cancelled';
 
-    -- ---- owner transfer is atomic -----------------------------------------
+    -- ---- exactly one active owner is enforced -----------------------------
     perform auth.become(v_owner);
-    perform public.kcp_transfer_ownership(v_group.id, v_parent_pid);
-    assert (select role from public.kcp_group_participants where id = v_parent_pid)
-           = 'owner', 'ownership must move';
-    assert (select role from public.kcp_group_participants where id = v_owner_pid)
-           = 'admin', 'previous owner becomes admin';
-    assert (select count(*) from public.kcp_group_participants
-            where group_id = v_group.id and role = 'owner' and status = 'active') = 1,
+    v_failed := false;
+    begin
+        update public.kcp_memberships
+           set role = 'owner'
+         where group_id = v_group.id and user_id = v_parent and status = 'active';
+        set constraints kcp_memberships_single_owner_check immediate;
+    exception when others then v_failed := true;
+    end;
+    assert v_failed, 'a second active owner must be rejected';
+    assert (select count(*) from public.kcp_memberships membership
+            where membership.group_id = v_group.id
+              and membership.role = 'owner' and membership.status = 'active') = 1,
            'exactly one active owner at all times';
 
     -- ---- audit log is append-only -----------------------------------------

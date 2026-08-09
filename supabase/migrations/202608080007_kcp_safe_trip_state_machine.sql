@@ -101,9 +101,16 @@ begin
         nullif(trim(p_client_event_id), ''), p_device_timestamp,
         coalesce(p_metadata, '{}'::jsonb)
     )
-    on conflict (client_event_id) do update
-       set client_event_id = excluded.client_event_id
+    on conflict (client_event_id) do nothing
     returning id into result_id;
+
+    if result_id is null then
+        select event.id
+          into result_id
+          from public.kcp_trip_events event
+         where event.client_event_id = nullif(trim(p_client_event_id), '');
+    end if;
+
     return result_id;
 end;
 $$;

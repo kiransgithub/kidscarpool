@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#071a3d">
+  <title>KCP Platform Support</title>
+  <link rel="icon" href="../icon-1024.png">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header class="support-topbar">
+    <div class="support-brand"><img src="../icon-1024.png" alt="KCP"><div><strong>KCP Platform Support</strong><span>Audited operations console</span></div></div>
+    <div class="support-account"><span id="supportIdentity"></span><button id="supportSignOut" class="text-button hidden" type="button">Sign out</button></div>
+  </header>
+
+  <main>
+    <section id="supportLoading" class="center-panel"><div class="spinner"></div><h1>Checking support access…</h1></section>
+
+    <section id="supportAuth" class="center-panel hidden">
+      <form id="supportAuthForm" class="support-card auth-card">
+        <img src="../icon-1024.png" alt="KCP" class="auth-logo">
+        <span class="eyebrow">VERIFIED PLATFORM ACCESS</span>
+        <h1>Sign in to support</h1>
+        <p>Use the permanent email account registered as a KCP platform administrator.</p>
+        <label>Email<input id="supportEmail" type="email" required autocomplete="email" placeholder="Platform administrator email"></label>
+        <button class="primary-button" type="submit">Send secure sign-in link</button>
+        <p id="supportAuthStatus" class="status-message" aria-live="polite"></p>
+      </form>
+    </section>
+
+    <section id="supportDenied" class="center-panel hidden">
+      <div class="support-card auth-card"><span class="eyebrow">ACCESS DENIED</span><h1>This account is not a platform administrator</h1><p>Group Owner or Admin roles do not grant access to the platform support console.</p><button id="deniedSignOut" class="secondary-button" type="button">Sign out</button></div>
+    </section>
+
+    <section id="supportApp" class="support-app hidden">
+      <nav class="support-nav" aria-label="Support sections">
+        <button class="active" data-support-view="dashboard" type="button">Dashboard</button>
+        <button data-support-view="groups" type="button">Groups</button>
+        <button data-support-view="cases" type="button">Cases</button>
+        <button data-support-view="diagnostics" type="button">Diagnostics</button>
+      </nav>
+
+      <section data-support-section="dashboard">
+        <div class="page-heading"><div><span class="eyebrow">PLATFORM OVERVIEW</span><h1>Support dashboard</h1></div><button class="secondary-button" data-action="refresh-support" type="button">Refresh</button></div>
+        <div id="supportMetrics" class="metric-grid"></div>
+        <div class="dashboard-grid"><section class="support-card"><h2>Needs attention</h2><div id="attentionList"></div></section><section class="support-card"><h2>System status</h2><div id="systemStatus"></div></section></div>
+      </section>
+
+      <section data-support-section="groups" class="hidden">
+        <div class="page-heading"><div><span class="eyebrow">ALL COMMUNITIES</span><h1>Groups</h1></div></div>
+        <div class="filter-bar"><input id="groupSearch" type="search" placeholder="Search group name or code"><select id="groupStatus"><option value="">All statuses</option><option value="active">Active</option><option value="archived">Archived</option></select><button id="groupSearchButton" class="primary-button" type="button">Search</button></div>
+        <div id="supportGroupList" class="support-list"></div>
+      </section>
+
+      <section data-support-section="cases" class="hidden">
+        <div class="page-heading"><div><span class="eyebrow">ISSUE RESOLUTION</span><h1>Support cases</h1></div></div>
+        <div class="filter-bar"><select id="caseStatus"><option value="">All statuses</option><option value="open">Open</option><option value="in_progress">In progress</option><option value="resolved">Resolved</option><option value="closed">Closed</option></select><button id="caseRefresh" class="primary-button" type="button">Refresh</button></div>
+        <div id="supportCaseList" class="support-list"></div>
+      </section>
+
+      <section data-support-section="diagnostics" class="hidden">
+        <div class="page-heading"><div><span class="eyebrow">TECHNICAL SUPPORT</span><h1>Diagnostics</h1></div></div>
+        <section class="support-card"><h2>Find an error reference</h2><div class="filter-bar"><input id="errorReference" placeholder="KCP-AB12CD34" autocapitalize="characters"><button id="errorSearch" class="primary-button" type="button">Search</button></div><div id="errorResults"></div></section>
+        <section class="support-card"><h2>Environment</h2><pre id="environmentDetails"></pre></section>
+      </section>
+    </section>
+  </main>
+
+  <dialog id="groupDetailDialog" class="detail-dialog"><div class="detail-shell"><header><div><span class="eyebrow">GROUP SUPPORT</span><h1 id="detailGroupName">Group</h1><p id="detailGroupMeta"></p></div><button id="groupDetailClose" type="button" aria-label="Close">×</button></header><div id="groupDetailContent" class="detail-content"></div></div></dialog>
+
+  <dialog id="breakGlassDialog" class="modal-dialog"><form id="breakGlassForm"><div class="dialog-title"><div><span class="eyebrow">AUDITED ACCESS</span><h2>Reveal sensitive group data</h2></div><button id="breakGlassClose" type="button" aria-label="Close">×</button></div><p>This access is visible in the platform audit trail and expires automatically.</p><label>Specific support reason<textarea id="breakGlassReason" rows="4" required minlength="10" placeholder="Describe the support case and why sensitive information is necessary"></textarea></label><label>Duration<select id="breakGlassMinutes"><option value="5">5 minutes</option><option value="10" selected>10 minutes</option><option value="15">15 minutes</option><option value="30">30 minutes</option></select></label><button class="danger-button" type="submit">Open break-glass access</button></form></dialog>
+
+  <div id="supportToast" class="toast hidden" role="status"></div>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

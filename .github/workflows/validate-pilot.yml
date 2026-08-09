@@ -26,7 +26,10 @@ jobs:
         run: |
           node web/build-runtime.mjs /tmp/kcp-app.mjs
           node --check /tmp/kcp-app.mjs
-          find web -maxdepth 2 -name '*.js' -type f -print0 | while IFS= read -r -d '' file; do
+          find web -maxdepth 1 -name '*.js' -type f -print0 | while IFS= read -r -d '' file; do
+            node --check "$file"
+          done
+          find web/platform-support -maxdepth 1 -name '*.js' -type f -print0 | while IFS= read -r -d '' file; do
             node --check "$file"
           done
       - name: Run all client logic and visual contract tests
